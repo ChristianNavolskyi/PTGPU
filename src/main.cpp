@@ -87,6 +87,10 @@ int main(int, char **)
 		return 1;
 	}
 
+	// TODO figure out how to draw the texture to the glfw background
+	// TODO get keyboard callbacks
+	// TODO OpenCL setup
+	
 	// Setup Dear ImGui context
 //	IMGUI_CHECKVERSION();
 //	ImGui::CreateContext();
