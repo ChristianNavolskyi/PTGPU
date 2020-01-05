@@ -7,7 +7,7 @@ find_package(GLEW REQUIRED)
 find_package(glfw3 REQUIRED)
 #find_package(OpenCL REQUIRED)
 
-link_directories(lib)
+add_subdirectory(ext/imgui)
 
 set(LIBRARIES glfw GLEW::glew imgui)
 
@@ -16,15 +16,6 @@ set(SOURCE_FILES
         include/CLCompiler.h
         include/CLTracer.h
         include/Display.h
-        include/imgui.h
-        include/imconfig.h
-        include/imgui_internal.h
-        include/imstb_rectpack.h
-        include/imstb_textedit.h
-        include/imstb_truetype.h
-        include/imgui_stdlib.h
-        include/imgui_impl_glfw.h
-        include/imgui_impl_opengl3.h
 
         # Source files
         src/main.cpp
@@ -32,6 +23,6 @@ set(SOURCE_FILES
         src/CLTracer.cpp
         src/Display.cpp)
 
-
 add_executable(PTGPU ${SOURCE_FILES})
 target_link_libraries(PTGPU ${LIBRARIES})
+target_include_directories(PTGPU PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/ext/imgui/include)
