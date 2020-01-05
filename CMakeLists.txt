@@ -16,12 +16,14 @@ set(SOURCE_FILES
         include/CLCompiler.h
         include/CLTracer.h
         include/Display.h
+        include/Renderer.h
 
         # Source files
         src/main.cpp
         src/CLCompiler.cpp
         src/CLTracer.cpp
-        src/Display.cpp)
+        src/Display.cpp
+        src/Renderer.cpp)
 
 add_executable(PTGPU ${SOURCE_FILES})
 target_link_libraries(PTGPU ${LIBRARIES})
