@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <Renderer.h>
+#include <CLTracer.h>
 
 #define OLD false
 
@@ -48,6 +49,9 @@ int main(int, char **)
 		return -1;
 	}
 
+	int width, height;
+	glfwGetFramebufferSize(window, &width, &height);
+
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1); // Enable vsync
 
@@ -62,9 +66,19 @@ int main(int, char **)
 	Renderer renderer;
 	renderer.init("../src/shaders/shader.vert", "../src/shaders/shader.frag");
 
+	float *imageData = (float *) malloc(sizeof(float) * width * height * 3);
+	size_t localWorkSize[] = {16, 16};
+
+	glFinish();
+
+	CLTracer tracer(localWorkSize);
+	tracer.init("../src/kernels/pathtracer.cl", "fill");
+	tracer.loadImage(imageData, width, height);
+
 	do
 	{
-		renderer.render();
+		tracer.trace(imageData);
+		renderer.render(imageData, width, height);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

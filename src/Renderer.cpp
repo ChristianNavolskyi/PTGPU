@@ -82,6 +82,7 @@ Renderer::Renderer()
 	glGenTextures(1, &textureId);
 	glGenBuffers(1, &vertexBufferObjectId);
 	glGenBuffers(1, &textureBufferObjectId);
+	glGenBuffers(1, &pixelBufferObject);
 }
 
 Renderer::~Renderer()
@@ -93,16 +94,20 @@ Renderer::~Renderer()
 	glDeleteProgram(programId);
 }
 
-void Renderer::loadDataToGPU()
+void Renderer::loadDataToGPU(int width, int height)
 {
 	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, texturePixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, texturePixels);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObjectId);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, textureBufferObjectId);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoords), textureCoords, GL_STATIC_DRAW);
+
+//	glBindBuffer(GL_ARRAY_BUFFER, pixelBufferObject);
+//	glBufferData(GL_ARRAY_BUFFER, width * height * sizeof(GL_FLOAT), nullptr, GLUSAGE)
+
 }
 
 
@@ -145,9 +150,26 @@ void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath
 	setShaderArgs();
 }
 
-void Renderer::render()
+void Renderer::render(float *imageData, int width, int height)
 {
+	glBindTexture(GL_TEXTURE_2D, textureId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, imageData);
+
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glFinish();
 }
+
+void Renderer::updateFrameSize(int width, int height)
+{
+	textureCoords[1] = height;
+
+	textureCoords[4] = width;
+	textureCoords[5] = height;
+
+	textureCoords[6] = width;
+
+
+}
+

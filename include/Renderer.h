@@ -21,6 +21,7 @@ private:
 
 	GLuint textureId;
 	GLuint textureBufferObjectId;
+	GLuint pixelBufferObject;
 
 	GLfloat texturePixels[12] = {
 			0.f, 0.f, 0.f, 1.f, 1.f, 1.f,
@@ -50,7 +51,7 @@ private:
 	};
 #endif
 
-	void loadDataToGPU();
+	void loadDataToGPU(int width = 2, int height = 2);
 
 	void setShaderArgs();
 
@@ -61,6 +62,8 @@ public:
 
 	void init(const char *vertexShaderPath, const char *fragmentShaderPath);
 
-	void render();
+	void updateFrameSize(int width, int height);
+
+	void render(float* imageData, int width, int height);
 };
 

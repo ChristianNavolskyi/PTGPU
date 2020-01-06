@@ -5,11 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(GLEW REQUIRED)
 find_package(glfw3 REQUIRED)
-#find_package(OpenCL REQUIRED)
+find_package(OpenCL REQUIRED)
 
 add_subdirectory(ext/imgui)
 
-set(LIBRARIES glfw GLEW::glew imgui)
+set(LIBRARIES glfw GLEW::glew imgui ${OpenCL_LIBRARIES})
 
 set(SOURCE_FILES
         # Header files
@@ -17,13 +17,15 @@ set(SOURCE_FILES
         include/CLTracer.h
         include/Display.h
         include/Renderer.h
+        include/CLUtil.h
 
         # Source files
         src/main.cpp
         src/CLCompiler.cpp
         src/CLTracer.cpp
         src/Display.cpp
-        src/Renderer.cpp)
+        src/Renderer.cpp
+        src/CLUtil.cpp)
 
 add_executable(PTGPU ${SOURCE_FILES})
 target_link_libraries(PTGPU ${LIBRARIES})
