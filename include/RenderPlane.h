@@ -16,7 +16,6 @@ private:
 	int planeWidth, planeHeight;
 	GLuint vertexArrayObjectId;
 	GLuint pixelBufferObject;
-	GLuint frameBufferObject;
 
 	GLfloat texturePixels[12] = {
 			0.f, 0.f, 0.f, 1.f, 1.f, 1.f,

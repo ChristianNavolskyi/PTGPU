@@ -196,7 +196,7 @@ void CLTracer::setImageSize(int imageWidth, int imageHeight)
 	width = imageWidth;
 	height = imageHeight;
 
-	iteration = 0;
+	iteration = 99;
 
 	cl_int clError;
 

@@ -4,9 +4,9 @@ __kernel void fill(__global float *image, int width, int height, int iteration) 
 
     int pos = gy * width * 3 + gx * 3;
 
-    float xFactor = (iteration) / (float) width;
-    float yFactor = (iteration) / (float) height;
-    float factor = (iteration) / (float) (width * height);
+    float xFactor = (gx + iteration) / (float) width;
+    float yFactor = (gy + iteration) / (float) height;
+    float factor = (pos + iteration) / (float) (width * height);
 
     image[pos] = xFactor - floor(xFactor);
     image[pos + 1] = yFactor - floor(yFactor);
