@@ -12,7 +12,7 @@
 #include "CLUtil.h"
 #include "CLTracer.h"
 
-CLTracer::CLTracer(const size_t localWorkSize[2]) : platformId(nullptr), commandQueue(nullptr), deviceId(nullptr), context(nullptr), kernel(nullptr), program(nullptr)
+CLTracer::CLTracer(Scene scene, const size_t localWorkSize[2]) : platformId(nullptr), commandQueue(nullptr), deviceId(nullptr), context(nullptr), kernel(nullptr), program(nullptr), scene(scene)
 {
 	this->localWorkSize[0] = localWorkSize[0];
 	this->localWorkSize[1] = localWorkSize[1];
@@ -35,6 +35,8 @@ bool CLTracer::init(const char *programPath, const char *kernelName)
 
 	loadProgram(programPath);
 	loadKernel(kernelName);
+
+	initScene();
 
 	return true;
 }
@@ -166,23 +168,22 @@ void CLTracer::trace(float *imageData)
 
 	cl_int clError;
 
-//	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-//	V_RETURN_CL(clError, "Failed to acquire OpenGL texture");
+	clError = clEnqueueWriteBuffer(commandQueue, image, CL_FALSE, 0, textureSize, imageData, 0, nullptr, nullptr);
+	clError |= clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, scene.getSphereSize(), scene.getSphereData(), 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to write data to OpenCL");
 
-	clError = clEnqueueWriteBuffer(commandQueue, image, CL_TRUE, 0, textureSize, imageData, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to load texture to OpenCL");
+	cl_int sphereCount = scene.getSphereCount();
 
 	clError = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &image);
-	clError |= clSetKernelArg(kernel, 1, sizeof(cl_int), (void *) &width);
-	clError |= clSetKernelArg(kernel, 2, sizeof(cl_int), (void *) &height);
-	clError |= clSetKernelArg(kernel, 3, sizeof(cl_int), (void *) &iteration);
+	clError |= clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &spheres);
+	clError |= clSetKernelArg(kernel, 2, sizeof(cl_int), (void *) &sphereCount);
+	clError |= clSetKernelArg(kernel, 3, sizeof(cl_int), (void *) &width);
+	clError |= clSetKernelArg(kernel, 4, sizeof(cl_int), (void *) &height);
+	clError |= clSetKernelArg(kernel, 5, sizeof(cl_int), (void *) &iteration);
 	V_RETURN_CL(clError, "Failed to set kernel arguments");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, kernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to enqueue kernel task");
-
-//	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-//	V_RETURN_CL(clError, "Failed to release OpenGL texture");
 
 	clError = clEnqueueReadBuffer(commandQueue, image, CL_TRUE, 0, textureSize, imageData, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to read texture from OpenCL");
@@ -196,7 +197,7 @@ void CLTracer::setImageSize(int imageWidth, int imageHeight)
 	width = imageWidth;
 	height = imageHeight;
 
-	iteration = 99;
+	iteration = 0;
 
 	cl_int clError;
 
@@ -212,3 +213,15 @@ void CLTracer::addGLTexture(GLenum textureTarget, GLuint textureId)
 	V_RETURN_CL(clError, "Failed to link GLTexture to CLMem");
 }
 
+void CLTracer::initScene()
+{
+	spheres = scene.createCLSphereBuffer(context);
+}
+
+void CLTracer::changeScene(Scene scene)
+{
+	this->scene = scene;
+
+	initScene();
+	iteration = 0;
+}

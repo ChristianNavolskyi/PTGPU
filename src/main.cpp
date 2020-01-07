@@ -9,6 +9,7 @@
 #include <iostream>
 #include <Renderer.h>
 #include <CLTracer.h>
+#include <Scene.h>
 
 
 std::string loadFileToString(const char *filepath);
@@ -75,10 +76,13 @@ int main(int, char **)
 	float *imageData = (float *) malloc(sizeof(float) * 3 * width * height);
 	size_t localWorkSize[] = {16, 16};
 
+	Scene scene;
+	scene.addSphere(10.f, 10.f, 10.5f, 10.f, 0.33f, 0.33f, 0.33f, 0.1f, 0.8f, 0.1f);
+
 	glFinish();
 
-	CLTracer tracer(localWorkSize);
-	tracer.init("../src/kernels/pathtracer.cl", "fill");
+	CLTracer tracer(scene, localWorkSize);
+	tracer.init("../src/kernels/pathtracer.cl", "render");
 //	tracer.addGLTexture(renderer.getTextureTarget(), renderer.getTextureId());
 	tracer.setImageSize(width, height);
 
