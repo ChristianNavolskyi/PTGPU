@@ -76,40 +76,15 @@ GLuint loadShaders(const char *vertexShaderPath, const char *fragmentShaderPath)
 	return programId;
 }
 
-Renderer::Renderer()
+Renderer::Renderer(int width, int height) : programId(0)
 {
-	glGenVertexArrays(1, &vertexArrayObjectId);
-	glGenTextures(1, &textureId);
-	glGenBuffers(1, &vertexBufferObjectId);
-	glGenBuffers(1, &textureBufferObjectId);
-	glGenBuffers(1, &pixelBufferObject);
+	plane = new RenderPlane(width, height);
 }
 
 Renderer::~Renderer()
 {
-	glDeleteBuffers(1, &vertexBufferObjectId);
-	glDeleteBuffers(1, &textureBufferObjectId);
-	glDeleteVertexArrays(1, &vertexArrayObjectId);
-	glDeleteTextures(1, &textureId);
 	glDeleteProgram(programId);
 }
-
-void Renderer::loadDataToGPU(int width, int height)
-{
-	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, texturePixels);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObjectId);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, textureBufferObjectId);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoords), textureCoords, GL_STATIC_DRAW);
-
-//	glBindBuffer(GL_ARRAY_BUFFER, pixelBufferObject);
-//	glBufferData(GL_ARRAY_BUFFER, width * height * sizeof(GL_FLOAT), nullptr, GLUSAGE)
-
-}
-
 
 void Renderer::setShaderArgs()
 {
@@ -117,59 +92,39 @@ void Renderer::setShaderArgs()
 	glEnableVertexAttribArray(1);
 
 	// vertex positions
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObjectId);
+	glBindBuffer(GL_ARRAY_BUFFER, plane->vertexBufferObjectId);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 	// texture coordinates
-	glBindBuffer(GL_ARRAY_BUFFER, textureBufferObjectId);
+	glBindBuffer(GL_ARRAY_BUFFER, plane->textureBufferObjectId);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 	// texture
-	glBindTexture(GL_TEXTURE_2D, textureId);
+	glBindTexture(GL_TEXTURE_2D, plane->textureId);
 	GLuint textureLocation = glGetUniformLocation(programId, "tex");
 	glUniform1i(textureLocation, 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, textureId);
+	glBindTexture(GL_TEXTURE_2D, plane->textureId);
 }
 
 void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath)
 {
+	plane->init();
 	programId = loadShaders(vertexShaderPath, fragmentShaderPath);
 
 	glUseProgram(programId);
 
-	glBindVertexArray(vertexArrayObjectId);
-
-	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-
-	loadDataToGPU();
 	setShaderArgs();
 }
 
-void Renderer::render(float *imageData, int width, int height)
+void Renderer::render(float* imageData)
 {
-	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, imageData);
-
 	glClear(GL_COLOR_BUFFER_BIT);
+
+	glBindTexture(GL_TEXTURE_2D, plane->textureId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, plane->getWidth(), plane->getHeight(), 0, GL_RGB, GL_FLOAT, imageData);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glFinish();
-}
-
-void Renderer::updateFrameSize(int width, int height)
-{
-	textureCoords[1] = height;
-
-	textureCoords[4] = width;
-	textureCoords[5] = height;
-
-	textureCoords[6] = width;
-
-
 }
 

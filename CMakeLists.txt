@@ -18,6 +18,7 @@ set(SOURCE_FILES
         include/Display.h
         include/Renderer.h
         include/CLUtil.h
+        include/RenderPlane.h
 
         # Source files
         src/main.cpp
@@ -25,7 +26,8 @@ set(SOURCE_FILES
         src/CLTracer.cpp
         src/Display.cpp
         src/Renderer.cpp
-        src/CLUtil.cpp)
+        src/CLUtil.cpp
+        src/RenderPlane.cpp)
 
 add_executable(PTGPU ${SOURCE_FILES})
 target_link_libraries(PTGPU ${LIBRARIES})

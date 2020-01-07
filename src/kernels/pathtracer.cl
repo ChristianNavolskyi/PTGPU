@@ -1,17 +1,14 @@
-__kernel void fill(__global float3 *image) {
-    float delta = 0.1f;
-
+__kernel void fill(__global float *image, int width, int height, int iteration) {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
-    int gsy = get_global_size(1);
 
-    int pos = gx * gsy + gy;
+    int pos = gy * width * 3 + gx * 3;
 
-    if (pos % 3 == 0) {
-        image[pos].x += delta;
-    } else if (pos % 3 == 1) {
-        image[pos].y += delta;
-    } else if (pos % 3 == 2) {
-        image[pos].z += delta;
-    }
+    float xFactor = (iteration) / (float) width;
+    float yFactor = (iteration) / (float) height;
+    float factor = (iteration) / (float) (width * height);
+
+    image[pos] = xFactor - floor(xFactor);
+    image[pos + 1] = yFactor - floor(yFactor);
+    image[pos + 2] = factor - floor(factor);
 }

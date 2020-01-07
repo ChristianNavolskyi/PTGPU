@@ -22,19 +22,31 @@ private:
 
 	cl_mem image;
 
-	int width, height;
+	cl_int width;
+	cl_int height;
+	cl_int iteration = 0;
 	size_t localWorkSize[2];
 
 	void loadPlatformAndDevice();
+
 	void loadContext();
+
 	void loadCommandQueue();
-	void loadProgram(const char* programPath);
-	void loadKernel(const char* kernelName);
+
+	void loadProgram(const char *programPath);
+
+	void loadKernel(const char *kernelName);
+
 public:
 	CLTracer(const size_t localWorkSize[2]);
+
 	~CLTracer();
 
-	bool init(const char* programPath, const char* kernelName);
-	void loadImage(float* imageData, int imageWidth, int imageHeight);
-	void trace(float* resultImage);
+	bool init(const char *programPath, const char *kernelName);
+
+	void setImageSize(int imageWidth, int imageHeight);
+
+	void trace(float* imageData);
+
+	void addGLTexture(GLenum textureTarget, GLuint textureId);
 };

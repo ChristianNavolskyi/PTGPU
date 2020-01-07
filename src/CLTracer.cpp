@@ -4,6 +4,11 @@
 
 #include <vector>
 #include <iostream>
+
+#include <OpenCL/cl_gl.h>
+#include <OpenGL/CGLCurrent.h>
+#include <GL/glew.h>
+
 #include "CLUtil.h"
 #include "CLTracer.h"
 
@@ -109,8 +114,17 @@ void CLTracer::loadPlatformAndDevice()
 void CLTracer::loadContext()
 {
 	cl_int clError;
-	context = clCreateContext(nullptr, 1, &deviceId, nullptr, nullptr, &clError);
+
+	CGLContextObj cglCurrentContext = CGLGetCurrentContext();
+	CGLShareGroupObj cglShareGroup = CGLGetShareGroup(cglCurrentContext);
+	cl_context_properties props[] =
+			{
+					CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties) cglShareGroup,
+					0};
+
+	context = clCreateContext(props, 1, &deviceId, nullptr, nullptr, &clError);
 	V_RETURN_CL(clError, "Failed to create OpenCL context.");
+
 	std::cout << "Created OpenCL context successfully." << std::endl;
 }
 
@@ -141,37 +155,60 @@ void CLTracer::loadKernel(const char *kernelName)
 	V_RETURN_CL(clError, "Failed to create kernel: Reduction_InterleavedAddressing.");
 }
 
-void CLTracer::trace(float *resultImage)
+void CLTracer::trace(float *imageData)
 {
+	glFinish();
+
+	size_t textureSize = sizeof(float) * 3 * width * height;
 	size_t globalWorkSize[2];
 	globalWorkSize[0] = CLUtil::GetGlobalWorkSize(width, localWorkSize[0]);
 	globalWorkSize[1] = CLUtil::GetGlobalWorkSize(height, localWorkSize[1]);
 
-	cl_int counter = 0;
 	cl_int clError;
 
+//	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+//	V_RETURN_CL(clError, "Failed to acquire OpenGL texture");
+
+	clError = clEnqueueWriteBuffer(commandQueue, image, CL_TRUE, 0, textureSize, imageData, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to load texture to OpenCL");
+
 	clError = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &image);
+	clError |= clSetKernelArg(kernel, 1, sizeof(cl_int), (void *) &width);
+	clError |= clSetKernelArg(kernel, 2, sizeof(cl_int), (void *) &height);
+	clError |= clSetKernelArg(kernel, 3, sizeof(cl_int), (void *) &iteration);
 	V_RETURN_CL(clError, "Failed to set kernel arguments");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, kernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to enqueue kernel task");
 
-	clError = clEnqueueReadBuffer(commandQueue, image, CL_TRUE, 0, width * height * 3 * sizeof(float), resultImage, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to read image buffer back to CPU");
+//	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+//	V_RETURN_CL(clError, "Failed to release OpenGL texture");
 
+	clError = clEnqueueReadBuffer(commandQueue, image, CL_TRUE, 0, textureSize, imageData, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to read texture from OpenCL");
+
+	iteration++;
 	clFinish(commandQueue);
 }
 
-void CLTracer::loadImage(float *imageData, int imageWidth, int imageHeight)
+void CLTracer::setImageSize(int imageWidth, int imageHeight)
+{
+	width = imageWidth;
+	height = imageHeight;
+
+	iteration = 0;
+
+	cl_int clError;
+
+	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * 3 * width * height, nullptr, &clError);
+	V_RETURN_CL(clError, "Failed to allocate memory for image");
+}
+
+void CLTracer::addGLTexture(GLenum textureTarget, GLuint textureId)
 {
 	cl_int clError;
 
-	image = clCreateBuffer(context, CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, imageWidth * imageHeight * 3 * sizeof(float), imageData, &clError);
-
-//	clError = clEnqueueWriteBuffer(commandQueue, image, CL_TRUE, 0, imageWidth * imageHeight * sizeof(cl_float3), imageData, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to write image to GPU");
-
-	width = imageWidth;
-	height = imageHeight;
+	image = clCreateFromGLTexture(context, CL_MEM_READ_WRITE, textureTarget, 0, textureId, &clError);
+	V_RETURN_CL(clError, "Failed to link GLTexture to CLMem");
 }
 
