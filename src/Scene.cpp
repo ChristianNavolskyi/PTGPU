@@ -32,7 +32,7 @@ size_t Scene::getSphereSize()
 
 const void *Scene::getSphereData()
 {
-	return &spheres;
+	return spheres.data();
 }
 
 cl_int Scene::getSphereCount()

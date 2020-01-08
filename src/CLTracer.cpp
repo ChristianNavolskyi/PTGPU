@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <iostream>
+#include <chrono>
 
 #include <OpenCL/cl_gl.h>
 #include <OpenGL/CGLCurrent.h>
@@ -16,6 +17,10 @@ CLTracer::CLTracer(Scene scene, const size_t localWorkSize[2]) : platformId(null
 {
 	this->localWorkSize[0] = localWorkSize[0];
 	this->localWorkSize[1] = localWorkSize[1];
+
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+	srand48(time);
 }
 
 CLTracer::~CLTracer()
@@ -75,8 +80,6 @@ void CLTracer::loadPlatformAndDevice()
 			std::cout << "[WARNING]: clGetDeviceIDs() failed. Error type: " << CLUtil::GetCLErrorString(res) << ", Platform name: " << buffer << "!" << std::endl;
 			continue;
 		}
-
-		const int maxBufferSize = 1024;
 
 		for (size_t j = 0; j < countDevices; j++)
 		{
@@ -167,12 +170,12 @@ void CLTracer::trace(float *imageData)
 	globalWorkSize[1] = CLUtil::GetGlobalWorkSize(height, localWorkSize[1]);
 
 	cl_int clError;
+	cl_int sphereCount = scene.getSphereCount();
+	float randomNumberSeed = (rand() / (float) RAND_MAX);
 
 	clError = clEnqueueWriteBuffer(commandQueue, image, CL_FALSE, 0, textureSize, imageData, 0, nullptr, nullptr);
 	clError |= clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, scene.getSphereSize(), scene.getSphereData(), 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to write data to OpenCL");
-
-	cl_int sphereCount = scene.getSphereCount();
 
 	clError = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &image);
 	clError |= clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &spheres);
@@ -180,6 +183,7 @@ void CLTracer::trace(float *imageData)
 	clError |= clSetKernelArg(kernel, 3, sizeof(cl_int), (void *) &width);
 	clError |= clSetKernelArg(kernel, 4, sizeof(cl_int), (void *) &height);
 	clError |= clSetKernelArg(kernel, 5, sizeof(cl_int), (void *) &iteration);
+	clError |= clSetKernelArg(kernel, 6, sizeof(cl_float), (void *) &randomNumberSeed);
 	V_RETURN_CL(clError, "Failed to set kernel arguments");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, kernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);

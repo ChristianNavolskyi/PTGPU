@@ -6,9 +6,12 @@ typedef struct Ray {
 
 typedef struct Sphere {
 	float radius;
+	float dummy1;
+	float dummy2;
+	float dummy3;
 	float3 position;
 	float3 color;
-	float3 emission;
+	float3 emittance;
 } Sphere;
 
 typedef struct Intersection {
@@ -158,7 +161,7 @@ bool findIntersection(Ray *cameraRay, Intersection *intersection, __constant Sph
     return false;
 }
 
-__kernel void render(__global float *image, __constant Sphere *spheres, const int sphereCount, const int width, const int height, const int iteration) {
+__kernel void render(__global float *image, __constant Sphere *spheres, const int sphereCount, const int width, const int height, const int iteration, const float seed) {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
     int pixelPosition = gy * width * 3 + gx * 3;
@@ -168,12 +171,19 @@ __kernel void render(__global float *image, __constant Sphere *spheres, const in
     float3 accumulatedColor = (float3) (0.f, 0.f, 0.f);
     float3 mask = (float3) (1.f, 1.f, 1.f);
 
+    float randomValue = random(seed, (float) gx, (float) gy);
+    float orandomValue = random((float) gx, seed, (float) gy);
+//    float3 color = (float3) (randomValue, orandomValue, randomValue);
+    setPixelColor3f(image, pixelPosition, spheres[1].position);
+    return;
+
     for (int i = 0; i < N_BOUNCES; i++) {
         Intersection intersection;
 
         if (findIntersection(&ray, &intersection, spheres, sphereCount)) {
-            accumulatedColor += mask * (float3) (1.f, 0.4f, 0.7f);
-            break;
+            float3 color = (float3) (randomValue, orandomValue, randomValue);
+            setPixelColor3f(image, pixelPosition, color);
+            return;
 
             float rand1 = random((float) gx, (float) gy, (float) iteration);
             float rand2 = random((float) gx, (float) gy, (float) iteration * iteration);
@@ -190,7 +200,7 @@ __kernel void render(__global float *image, __constant Sphere *spheres, const in
             ray.origin = intersection.position + intersection.normal * EPSILON;
             ray.direction = newdir;
 
-            accumulatedColor += mask * intersection.sphere->emission;
+            accumulatedColor += mask * intersection.sphere->emittance;
 
             mask *= intersection.sphere->color;
 
