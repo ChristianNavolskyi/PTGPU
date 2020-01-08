@@ -76,8 +76,8 @@ void setPixelColor3f(__global float* image, int position, float3 color) {
 
 Ray getCameraRay(int x, int y, int width, int height) {
     float3 camOrigin = (float3) (0.f, 0.f, 0.f);
-    float3 up = (float3) (0.f, 0.f, 1.f);
-    float3 viewDirection = (float3) (0.f, 1.f, 0.f);
+    float3 up = (float3) (0.f, 1.f, 0.f);
+    float3 viewDirection = (float3) (0.f, 0.f, 1.f);
 
     float3 wVector = normalize(-viewDirection);
     float3 uVector = normalize(cross(up, wVector));
@@ -174,17 +174,13 @@ __kernel void render(__global float *image, __constant Sphere *spheres, const in
     float randomValue = random(seed, (float) gx, (float) gy);
     float orandomValue = random((float) gx, seed, (float) gy);
 //    float3 color = (float3) (randomValue, orandomValue, randomValue);
-    setPixelColor3f(image, pixelPosition, spheres[1].position);
-    return;
+//    setPixelColor3f(image, pixelPosition, spheres[1].position);
+//    return;
 
     for (int i = 0; i < N_BOUNCES; i++) {
         Intersection intersection;
 
         if (findIntersection(&ray, &intersection, spheres, sphereCount)) {
-            float3 color = (float3) (randomValue, orandomValue, randomValue);
-            setPixelColor3f(image, pixelPosition, color);
-            return;
-
             float rand1 = random((float) gx, (float) gy, (float) iteration);
             float rand2 = random((float) gx, (float) gy, (float) iteration * iteration);
             float rand2s = sqrt(rand2);

@@ -77,8 +77,8 @@ int main(int, char **)
 	size_t localWorkSize[] = {16, 16};
 
 	Scene scene;
-	scene.addSphere(0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
-	scene.addSphere(0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+	scene.addSphere(0.f, 1.f, -10.f, 2.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f);
+	scene.addSphere(0.f, 1.f, 10.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
 
 	glFinish();
 
