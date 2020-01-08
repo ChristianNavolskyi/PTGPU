@@ -1,16 +1,18 @@
 //
-// Created by Melina Christian Navolskyi on 04.01.20.
+// Created by Christian Navolskyi on 04.01.20.
 //
 
 #pragma once
 
 #include <OpenCL/cl.h>
 #include "Scene.h"
+#include "InteractiveCamera.h"
+#include "RenderInfoListener.h"
 
 /**
  * This class contains all the OpenCL context information, starts the path tracing execution and returns the result
  */
-class CLTracer
+class CLTracer : public RenderInfoListener
 {
 private:
 	cl_platform_id platformId;
@@ -18,20 +20,21 @@ private:
 	cl_context context;
 	cl_command_queue commandQueue;
 
-	cl_kernel kernel;
+	cl_kernel renderKernel;
+	cl_kernel clearKernel;
 	cl_program program;
 
 	cl_mem image;
 	cl_mem spheres;
+	cl_int sphereCount;
+	cl_mem camera;
 
-	cl_int width;
-	cl_int height;
 	cl_int iteration = 0;
 	size_t localWorkSize[2];
+	size_t globalWorkSize[2];
 	Scene scene;
 
-	cl_float3 cameraPosition; // TODO incorporate
-	cl_float3 viewDirection;
+	int width, height;
 
 	void loadPlatformAndDevice();
 
@@ -41,7 +44,11 @@ private:
 
 	void loadProgram(const char *programPath);
 
-	void loadKernel(const char *kernelName);
+	void loadKernel(cl_kernel *kernel, const char *kernelName);
+
+	void clearImage();
+
+	void setGlobalWorkSize();
 
 	void initScene();
 
@@ -50,13 +57,17 @@ public:
 
 	~CLTracer();
 
-	bool init(const char *programPath, const char *kernelName);
+	bool init(const char *programPath);
 
 	void changeScene(Scene scene);
 
-	void setImageSize(int imageWidth, int imageHeight);
-
 	void trace(float *imageData);
 
-	void addGLTexture(GLenum textureTarget, GLuint textureId);
+	void linkGLRenderTarget(GLenum textureTarget, GLuint textureId);
+
+	void resetRendering();
+
+	void notify() override;
+
+	void notifySizeChanged(int newWidth, int newHeight) override;
 };

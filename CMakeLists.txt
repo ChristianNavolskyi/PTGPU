@@ -15,22 +15,22 @@ set(SOURCE_FILES
         # Header files
         include/CLCompiler.h
         include/CLTracer.h
-        include/Display.h
         include/Renderer.h
         include/CLUtil.h
         include/RenderPlane.h
         include/Scene.h
+        include/InteractiveCamera.h
+        include/RenderInfoListener.h
 
         # Source files
         src/main.cpp
         src/CLCompiler.cpp
         src/CLTracer.cpp
-        src/Display.cpp
         src/Renderer.cpp
         src/CLUtil.cpp
         src/RenderPlane.cpp
         src/Scene.cpp
-        )
+        src/InteractiveCamera.cpp)
 
 add_executable(PTGPU ${SOURCE_FILES})
 target_link_libraries(PTGPU ${LIBRARIES})

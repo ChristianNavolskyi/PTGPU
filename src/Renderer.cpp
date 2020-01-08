@@ -1,5 +1,5 @@
 //
-// Created by Melina Christian Navolskyi on 05.01.20.
+// Created by Christian Navolskyi on 05.01.20.
 //
 
 #include <fstream>

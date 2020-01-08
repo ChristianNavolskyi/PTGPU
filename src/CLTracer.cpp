@@ -1,5 +1,5 @@
 //
-// Created by Melina Christian Navolskyi on 04.01.20.
+// Created by Christian Navolskyi on 04.01.20.
 //
 
 #include <vector>
@@ -21,25 +21,28 @@ CLTracer::CLTracer(Scene scene, const size_t localWorkSize[2]) : platformId(null
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
 	srand48(time);
+	scene.linkUpdateListener(this);
 }
 
 CLTracer::~CLTracer()
 {
-	clReleaseKernel(kernel);
+	clReleaseKernel(renderKernel);
+	clReleaseKernel(clearKernel);
 	clReleaseProgram(program);
 	clReleaseCommandQueue(commandQueue);
 	clReleaseContext(context);
 	clReleaseDevice(deviceId);
 }
 
-bool CLTracer::init(const char *programPath, const char *kernelName)
+bool CLTracer::init(const char *programPath)
 {
 	loadPlatformAndDevice();
 	loadContext();
 	loadCommandQueue();
 
 	loadProgram(programPath);
-	loadKernel(kernelName);
+	loadKernel(&renderKernel, "render");
+	loadKernel(&clearKernel, "clearImage");
 
 	initScene();
 
@@ -153,11 +156,22 @@ void CLTracer::loadProgram(const char *programPath)
 		exit(-1);
 }
 
-void CLTracer::loadKernel(const char *kernelName)
+void CLTracer::loadKernel(cl_kernel *kernel, const char *kernelName)
 {
 	cl_int clError;
-	kernel = clCreateKernel(program, kernelName, &clError);
-	V_RETURN_CL(clError, "Failed to create kernel: Reduction_InterleavedAddressing.");
+	*kernel = clCreateKernel(program, kernelName, &clError);
+
+	std::string errorMessage = "Failed to create ";
+	errorMessage += kernelName;
+	V_RETURN_CL(clError, errorMessage);
+}
+
+void CLTracer::clearImage()
+{
+	glFinish();
+
+
+	clFinish(commandQueue);
 }
 
 void CLTracer::trace(float *imageData)
@@ -166,8 +180,7 @@ void CLTracer::trace(float *imageData)
 
 	size_t textureSize = sizeof(float) * 3 * width * height;
 	size_t globalWorkSize[2];
-	globalWorkSize[0] = CLUtil::GetGlobalWorkSize(width, localWorkSize[0]);
-	globalWorkSize[1] = CLUtil::GetGlobalWorkSize(height, localWorkSize[1]);
+	setGlobalWorkSize();
 
 	cl_int clError;
 	cl_int sphereCount = scene.getSphereCount();
@@ -177,16 +190,15 @@ void CLTracer::trace(float *imageData)
 	clError |= clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, scene.getSphereSize(), scene.getSphereData(), 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to write data to OpenCL");
 
-	clError = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &image);
-	clError |= clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &spheres);
-	clError |= clSetKernelArg(kernel, 2, sizeof(cl_int), (void *) &sphereCount);
-	clError |= clSetKernelArg(kernel, 3, sizeof(cl_int), (void *) &width);
-	clError |= clSetKernelArg(kernel, 4, sizeof(cl_int), (void *) &height);
-	clError |= clSetKernelArg(kernel, 5, sizeof(cl_int), (void *) &iteration);
-	clError |= clSetKernelArg(kernel, 6, sizeof(cl_float), (void *) &randomNumberSeed);
+	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
+	clError |= clSetKernelArg(renderKernel, 1, sizeof(cl_mem), (void *) &spheres);
+	clError |= clSetKernelArg(renderKernel, 2, sizeof(cl_int), (void *) &sphereCount);
+	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &camera);
+	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
+	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_float), (void *) &randomNumberSeed);
 	V_RETURN_CL(clError, "Failed to set kernel arguments");
 
-	clError = clEnqueueNDRangeKernel(commandQueue, kernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
+	clError = clEnqueueNDRangeKernel(commandQueue, renderKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to enqueue kernel task");
 
 	clError = clEnqueueReadBuffer(commandQueue, image, CL_TRUE, 0, textureSize, imageData, 0, nullptr, nullptr);
@@ -196,20 +208,7 @@ void CLTracer::trace(float *imageData)
 	clFinish(commandQueue);
 }
 
-void CLTracer::setImageSize(int imageWidth, int imageHeight)
-{
-	width = imageWidth;
-	height = imageHeight;
-
-	iteration = 0;
-
-	cl_int clError;
-
-	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * 3 * width * height, nullptr, &clError);
-	V_RETURN_CL(clError, "Failed to allocate memory for image");
-}
-
-void CLTracer::addGLTexture(GLenum textureTarget, GLuint textureId)
+void CLTracer::linkGLRenderTarget(GLenum textureTarget, GLuint textureId)
 {
 	cl_int clError;
 
@@ -219,7 +218,9 @@ void CLTracer::addGLTexture(GLenum textureTarget, GLuint textureId)
 
 void CLTracer::initScene()
 {
+	camera = scene.createCLCameraBuffer(context);
 	spheres = scene.createCLSphereBuffer(context);
+	sphereCount = scene.getSphereCount();
 }
 
 void CLTracer::changeScene(Scene scene)
@@ -228,4 +229,32 @@ void CLTracer::changeScene(Scene scene)
 
 	initScene();
 	iteration = 0;
+}
+
+void CLTracer::resetRendering()
+{
+	iteration = 0;
+}
+
+void CLTracer::notify()
+{
+	// TODO (re-)load camera and spheres into gpu memory.
+}
+
+void CLTracer::notifySizeChanged(int newWidth, int newHeight)
+{
+	width = newWidth;
+	height = newHeight;
+
+	cl_int clError;
+
+
+	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * 3 * width * height, nullptr, &clError);
+	V_RETURN_CL(clError, "Failed to allocate memory for image");
+}
+
+void CLTracer::setGlobalWorkSize()
+{
+	globalWorkSize[0] = CLUtil::GetGlobalWorkSize(width, localWorkSize[0]);
+	globalWorkSize[1] = CLUtil::GetGlobalWorkSize(height, localWorkSize[1]);
 }

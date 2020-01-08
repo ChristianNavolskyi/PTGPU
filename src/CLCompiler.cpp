@@ -1,5 +1,5 @@
 //
-// Created by Melina Christian Navolskyi on 04.01.20.
+// Created by Christian Navolskyi on 04.01.20.
 //
 
 #include "../include/CLCompiler.h"

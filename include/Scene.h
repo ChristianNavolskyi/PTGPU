@@ -1,5 +1,5 @@
 //
-// Created by Melina Christian Navolskyi on 07.01.20.
+// Created by Christian Navolskyi on 07.01.20.
 //
 
 #pragma once
@@ -7,6 +7,8 @@
 
 #include <vector>
 #include <OpenCL/opencl.h>
+#include "InteractiveCamera.h"
+#include "RenderInfoListener.h"
 
 struct Sphere
 {
@@ -19,34 +21,49 @@ struct Sphere
 	cl_float3 emittance;
 };
 
+enum SceneMovementDirections {
+	UP, DOWN, LEFT, RIGHT, FORWARD, BACKWARD, YAW_LEFT, YAW_RIGHT, PITCH_DOWN, PITCH_UP
+};
+
 class Scene
 {
 private:
 	std::vector<Sphere> spheres;
+	InteractiveCamera camera;
+	RenderInfoListener *changeListener = nullptr;
+
+	void notifyListenerCameraChanged(Camera camera);
+
+	void notifyListenerResolutionChanged(int width, int height);
 
 public:
-	Scene();
+	Scene(int width, int height);
+
 	~Scene();
 
-	void addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance, float gEmittance, float bEmittance)
-	{
-		Sphere sphere{};
-		sphere.radius = radius;
-		sphere.position = {{xPos, yPos, zPos}};
-		sphere.color = {{rColor, gColor, bColor}};
-		sphere.emittance = {{rEmittance, gEmittance, bEmittance}};
+	void addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance, float gEmittance, float bEmittance);
 
-		spheres.push_back(sphere);
-	}
-
+	void linkUpdateListener(RenderInfoListener *listener);
 
 	cl_mem createCLSphereBuffer(cl_context context);
+
+	cl_mem createCLCameraBuffer(cl_context context);
 
 	size_t getSphereSize();
 
 	const void *getSphereData();
 
 	cl_int getSphereCount();
+
+	void initialMousePosition(float xPos, float yPos);
+
+	void updateMousePosition(float xPos, float yPos);
+
+	void changeResolution(int width, int height);
+
+	void move(SceneMovementDirections direction);
+
+	glm::ivec2 getResolution();
 };
 
 

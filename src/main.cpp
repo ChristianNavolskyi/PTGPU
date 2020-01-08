@@ -23,11 +23,12 @@ static void printError(const char *description)
 	std::cerr << description << std::endl;
 }
 
-struct SizeAdaptionHolder
+struct GLFWReferenceHolder
 {
 	Renderer *renderer;
-	CLTracer *tracer;
+	Scene *scene;
 	float *imageData;
+	bool mousePressed;
 };
 
 int main(int, char **)
@@ -76,34 +77,113 @@ int main(int, char **)
 	float *imageData = (float *) malloc(sizeof(float) * 3 * width * height);
 	size_t localWorkSize[] = {16, 16};
 
-	Scene scene;
+	Scene scene(width, height);
 	scene.addSphere(0.f, 1.f, -10.f, 2.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f);
-	scene.addSphere(0.f, 1.f, 10.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
+	scene.addSphere(0.f, 0.f, 200.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
 
 	glFinish();
 
 	CLTracer tracer(scene, localWorkSize);
-	tracer.init("../src/kernels/pathtracer.cl", "render");
-//	tracer.addGLTexture(renderer.getTextureTarget(), renderer.getTextureId());
-	tracer.setImageSize(width, height);
+	tracer.init("../src/kernels/pathtracer.cl");
+//	tracer.linkGLRenderTarget(renderer.getTextureTarget(), renderer.getTextureId());
 
-	SizeAdaptionHolder holder{};
+	GLFWReferenceHolder holder{};
 	holder.renderer = &renderer;
-	holder.tracer = &tracer;
+	holder.scene = &scene;
 	holder.imageData = imageData;
+	holder.mousePressed = false;
 
 	glfwSetWindowUserPointer(window, &holder);
-	auto callback = [](GLFWwindow *window, int width, int height)
+	auto frameSizeCallback = [](GLFWwindow *window, int width, int height)
 	{
-		auto holder = (SizeAdaptionHolder *)
+		auto holder = (GLFWReferenceHolder *)
 				glfwGetWindowUserPointer(window);
 
 		free(holder->imageData);
 		holder->imageData = (float *) malloc(sizeof(float) * 3 * width * height);
 		holder->renderer->setRenderSize(width, height);
-		holder->tracer->setImageSize(width, height);
+		holder->scene->changeResolution(width, height);
 	};
-	glfwSetFramebufferSizeCallback(window, callback);
+
+	auto mouseButtonCallback = [](GLFWwindow *window, int button, int action, int mods)
+	{
+		if (button == GLFW_MOUSE_BUTTON_LEFT)
+		{
+			auto holder = (GLFWReferenceHolder *) glfwGetWindowUserPointer(window);
+
+			if (action == GLFW_PRESS)
+			{
+				double xPos, yPos;
+				glfwGetCursorPos(window, &xPos, &yPos);
+
+				holder->scene->initialMousePosition((float) xPos, (float) yPos);
+				holder->mousePressed = true;
+			}
+			else if (action == GLFW_RELEASE)
+			{
+				holder->mousePressed = false;
+			}
+		}
+	};
+
+	auto mouseMovementCallback = [](GLFWwindow *window, double xPos, double yPos)
+	{
+		auto holder = (GLFWReferenceHolder *) glfwGetWindowUserPointer(window);
+
+		if (holder->mousePressed)
+		{
+			holder->scene->updateMousePosition((float) xPos, (float) yPos);
+		}
+	};
+
+	auto keyCallback = [](GLFWwindow *window, int key, int scanCode, int action, int mods)
+	{
+		if (action == GLFW_PRESS || action == GLFW_REPEAT)
+		{
+			auto scene = ((GLFWReferenceHolder *) glfwGetWindowUserPointer(window))->scene;
+
+			switch (key)
+			{
+			case GLFW_KEY_W:
+				scene->move(FORWARD);
+				break;
+			case GLFW_KEY_S:
+				scene->move(BACKWARD);
+				break;
+			case GLFW_KEY_A:
+				scene->move(LEFT);
+				break;
+			case GLFW_KEY_D:
+				scene->move(RIGHT);
+				break;
+			case GLFW_KEY_R:
+				scene->move(UP);
+				break;
+			case GLFW_KEY_F:
+				scene->move(DOWN);
+				break;
+			case GLFW_KEY_LEFT:
+				scene->move(YAW_LEFT);
+				break;
+			case GLFW_KEY_RIGHT:
+				scene->move(YAW_RIGHT);
+				break;
+			case GLFW_KEY_UP:
+				scene->move(PITCH_UP);
+				break;
+			case GLFW_KEY_DOWN:
+				scene->move(PITCH_DOWN);
+				break;
+			default:
+				break;
+			}
+		}
+	};
+
+	glfwSetKeyCallback(window, keyCallback);
+	glfwSetCursorPosCallback(window, mouseMovementCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetFramebufferSizeCallback(window, frameSizeCallback);
 
 	do
 	{
