@@ -85,7 +85,7 @@ int main(int, char **)
 
 	CLTracer tracer(scene, localWorkSize);
 	tracer.init("../src/kernels/pathtracer.cl");
-	tracer.initializeRenderPlane(imagePlane);
+//	tracer.initializeRenderPlane(imagePlane);
 //	tracer.linkOpenGLResources(renderer.getVertexBufferId(), renderer.getColorBufferId());
 
 	GLFWReferenceHolder holder{};
@@ -100,7 +100,7 @@ int main(int, char **)
 	do
 	{
 		tracer.trace(holder.imageData);
-		renderer.render(holder.imageData, holder.imagePlane);
+		renderer.render(holder.imageData);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

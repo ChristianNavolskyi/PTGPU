@@ -68,13 +68,13 @@ public:
 
 	bool init(const char *programPath);
 
-	void initializeRenderPlane(float *imagePlane);
-
-	void linkOpenGLResources(GLuint vertexTargetId, GLuint colorTargetId);
+	void linkOpenGLResources(GLuint vertexTargetId, GLenum vertex, GLuint colorTargetId);
 
 	void changeScene(Scene scene);
 
 	void trace(float *imageData);
+
+	void linkGLRenderTarget(GLenum textureTarget, GLuint textureId);
 
 	void resetRendering();
 
@@ -87,8 +87,4 @@ public:
 	void writeSceneBuffer();
 
 	void writeCameraBuffer();
-
-	void setSizeArgs();
-
-	void initAppleCLGL();
 };

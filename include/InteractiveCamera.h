@@ -30,7 +30,7 @@ private:
 
 	float lastXPos = 0.f, lastYPos = 0.f;
 
-	const float padding = 0.001f;
+	 float padding = 0.001f;
 
 	glm::vec3 setupViewDirection();
 
