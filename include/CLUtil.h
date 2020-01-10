@@ -37,15 +37,6 @@ public:
 	//! Builds a CL program
 	static cl_program BuildCLProgramFromMemory(cl_device_id Device, cl_context Context, const std::string &sourceCode, const std::string &compileOptions = "");
 
-	static void PrintBuildLog(cl_program Program, cl_device_id Device);
-
-	static void LoadAndPrintFloat4Array(cl_command_queue CommandQueue, cl_mem array, unsigned int size);
-	static void LoadAndPrintIntArray(cl_command_queue CommandQueue, cl_mem array, unsigned int size);
-
-	//! Print out an array to the console
-	static void PrintArray(cl_float4 *array, unsigned int size);
-	static void PrintArray(uint *array, unsigned int size);
-
 	static const char *GetCLErrorString(cl_int CLErrorCode);
 };
 

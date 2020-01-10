@@ -70,7 +70,6 @@ cl_program CLUtil::BuildCLProgramFromMemory(cl_device_id Device, cl_context Cont
 	// program created, now build it:
 	const char *pCompileOptions = CompileOptions.size() > 0 ? CompileOptions.c_str() : nullptr;
 	clError = clBuildProgram(prog, 1, &Device, pCompileOptions, nullptr, nullptr);
-	PrintBuildLog(prog, Device);
 	if (CL_SUCCESS != clError)
 	{
 		std::cerr << "Failed to build CL program.";
@@ -80,78 +79,6 @@ cl_program CLUtil::BuildCLProgramFromMemory(cl_device_id Device, cl_context Cont
 
 
 	return prog;
-}
-
-void CLUtil::PrintBuildLog(cl_program Program, cl_device_id Device)
-{
-	cl_build_status buildStatus;
-	clGetProgramBuildInfo(Program, Device, CL_PROGRAM_BUILD_STATUS, sizeof(cl_build_status), &buildStatus, nullptr);
-
-	// let's print out possible warnings even if the kernel compiled..
-	//if(buildStatus == CL_SUCCESS)
-	//	return;
-
-	//there were some errors.
-	size_t logSize;
-	clGetProgramBuildInfo(Program, Device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &logSize);
-	std::string buildLog(logSize, ' ');
-
-	clGetProgramBuildInfo(Program, Device, CL_PROGRAM_BUILD_LOG, logSize, &buildLog[0], nullptr);
-	buildLog[logSize] = '\0';
-
-	if (buildStatus != CL_SUCCESS)
-		std::cout << "There were build errors!" << std::endl;
-	std::cout << "Build log:" << std::endl;
-	std::cout << buildLog << std::endl;
-}
-
-
-void CLUtil::LoadAndPrintFloat4Array(cl_command_queue CommandQueue, cl_mem array, unsigned int size)
-{
-	// avoid memory problems
-	unsigned int actualPrintSize = std::min(size, (unsigned int) 256);
-	// For debugging result
-	auto *result = new cl_float4[actualPrintSize];
-	// Read array from memory and print it out completely
-	V_RETURN_CL(clEnqueueReadBuffer(CommandQueue, array, CL_TRUE, 0, sizeof(cl_float4) * actualPrintSize, result, 0, nullptr, nullptr), "Copying result back failed.");
-	CLUtil::PrintArray(result, actualPrintSize);
-}
-
-void CLUtil::LoadAndPrintIntArray(cl_command_queue CommandQueue, cl_mem array, unsigned int size)
-{
-	// avoid memory problems
-	unsigned int actualPrintSize = std::min(size, (unsigned int) 32);
-	// For debugging result
-	auto *result = new uint[actualPrintSize];
-	// Read array from memory and print it out completely
-	V_RETURN_CL(clEnqueueReadBuffer(CommandQueue, array, CL_TRUE, 0, sizeof(uint) * actualPrintSize, result, 0, nullptr, nullptr), "Copying result back failed.");
-	CLUtil::PrintArray(result, actualPrintSize);
-}
-
-void CLUtil::PrintArray(cl_float4 *array, unsigned int size)
-{
-	std::cout << "Printing Array of size " << size << std::endl;
-
-	for (unsigned int i = 0; i < size; i++)
-	{
-		std::cout << " array[" << i << "]:\ts[0]: " << array[i].s[0] << "\t\t\ts[1]: " << array[i].s[1] << "\t\t\ts[2]: " << array[i].s[2] << "\t\t\ts[3]: " << array[i].s[3] << std::endl;
-	}
-
-	std::cout << std::endl
-			  << std::endl;
-}
-
-void CLUtil::PrintArray(uint *array, unsigned int size)
-{
-	std::cout << "Printing Array of size " << size << std::endl;
-
-	for (unsigned int i = 0; i < size; i++)
-	{
-		std::cout << array[i] << " ";
-	}
-
-	std::cout << std::endl
-			  << std::endl;
 }
 
 #define CL_ERROR(x) case (x): return #x;

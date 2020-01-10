@@ -174,11 +174,11 @@ __kernel void render(__global float *image, __constant Sphere *spheres, const in
     float3 accumulatedColor = (float3) (0.f, 0.f, 0.f);
     float3 mask = (float3) (1.f, 1.f, 1.f);
 
-//    float randomValue = random(seed, (float) gx, (float) gy);
-//    float orandomValue = random((float) gx, seed, (float) gy);
-//    float3 color = (float3) (randomValue, orandomValue, randomValue);
-//    setPixelColor3f(image, pixelPosition, color);
-//    return;
+    float randomValue = random(seed, (float) gx, (float) gy);
+    float orandomValue = random((float) gx, seed, (float) gy);
+    float3 color = (float3) (randomValue, orandomValue, randomValue);
+    setPixelColor3f(image, pixelPosition, color);
+    return;
 
     for (int i = 0; i < N_BOUNCES; i++) {
         Intersection intersection;
@@ -213,7 +213,9 @@ __kernel void render(__global float *image, __constant Sphere *spheres, const in
         }
     }
 
-    setPixelColor3f(image, pixelPosition, accumulatedColor);
+    if (pixelPosition < width * height) {
+        setPixelColor3f(image, pixelPosition, accumulatedColor);
+    }
 }
 
 __kernel void clearImage(__global float* image, const int width, const int height) {
@@ -222,9 +224,11 @@ __kernel void clearImage(__global float* image, const int width, const int heigh
 
     int position = gy * width * 3 + gx * 3;
 
-    float3 clearColor = (float3) (0.f, 0.f, 0.f);
+    float3 clearColor = (float3) (1.f, 1.f, 1.f);
 
-    setPixelColor3f(image, position, clearColor);
+    if (position < width * height) {
+        setPixelColor3f(image, position, clearColor);
+    }
 }
 
 __kernel void initializeRenderPlane(__global float2* image, const int width, const int height) {

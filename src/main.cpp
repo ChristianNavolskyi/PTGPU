@@ -12,24 +12,19 @@
 #include <Scene.h>
 
 
-std::string loadFileToString(const char *filepath);
+struct GLFWReferenceHolder
+{
+	Renderer *renderer;
+	Scene *scene;
+	bool mousePressed;
+};
 
-GLuint addShader(const char *shaderPath, GLenum shaderType, GLuint programId);
-
-GLuint loadShaders(const char *vertexShaderPath, const char *fragmentShaderPath);
+void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder);
 
 static void printError(const char *description)
 {
 	std::cerr << description << std::endl;
 }
-
-struct GLFWReferenceHolder
-{
-	Renderer *renderer;
-	Scene *scene;
-	float *imageData;
-	bool mousePressed;
-};
 
 int main(int, char **)
 {
@@ -47,6 +42,8 @@ int main(int, char **)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+	glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_TRUE);
+	glfwWindowHint(GLFW_COCOA_GRAPHICS_SWITCHING, GL_FALSE);
 
 	// Create window with graphics context
 	GLFWwindow *window = glfwCreateWindow(1000, 600, "OpenCL Path Tracer", nullptr, nullptr);
@@ -71,36 +68,52 @@ int main(int, char **)
 		return -1;
 	}
 
-	Renderer renderer(width, height);
-	renderer.init("../src/shaders/shader.vert", "../src/shaders/shader.frag");
-
-	float *imageData = (float *) malloc(sizeof(float) * 3 * width * height);
 	size_t localWorkSize[] = {16, 16};
-
 	Scene scene(width, height);
 	scene.addSphere(0.f, 1.f, -10.f, 2.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f);
 	scene.addSphere(0.f, 0.f, 200.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
+
+	Renderer renderer(width, height);
+	renderer.init("../src/shaders/shader.vert", "../src/shaders/shader.frag");
 
 	glFinish();
 
 	CLTracer tracer(scene, localWorkSize);
 	tracer.init("../src/kernels/pathtracer.cl");
-//	tracer.linkGLRenderTarget(renderer.getTextureTarget(), renderer.getTextureId());
+	tracer.linkOpenGLResources(renderer.getVertexBufferId(), renderer.getColorBufferId());
 
 	GLFWReferenceHolder holder{};
 	holder.renderer = &renderer;
 	holder.scene = &scene;
-	holder.imageData = imageData;
 	holder.mousePressed = false;
 
-	glfwSetWindowUserPointer(window, &holder);
+	setupCallbacks(window, &holder);
+
+	do
+	{
+		tracer.trace();
+		renderer.render();
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	} while (!glfwWindowShouldClose(window));
+
+	glfwTerminate();
+	return 0;
+
+
+	// TODO get keyboard callbacks
+	// TODO OpenCL setup
+}
+
+void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
+{
+	glfwSetWindowUserPointer(window, holder);
 	auto frameSizeCallback = [](GLFWwindow *window, int width, int height)
 	{
 		auto holder = (GLFWReferenceHolder *)
 				glfwGetWindowUserPointer(window);
 
-		free(holder->imageData);
-		holder->imageData = (float *) malloc(sizeof(float) * 3 * width * height);
 		holder->renderer->setRenderSize(width, height);
 		holder->scene->changeResolution(width, height);
 	};
@@ -184,20 +197,4 @@ int main(int, char **)
 	glfwSetCursorPosCallback(window, mouseMovementCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
 	glfwSetFramebufferSizeCallback(window, frameSizeCallback);
-
-	do
-	{
-		tracer.trace(holder.imageData);
-		renderer.render(holder.imageData);
-
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	} while (!glfwWindowShouldClose(window));
-
-	glfwTerminate();
-	return 0;
-
-
-	// TODO get keyboard callbacks
-	// TODO OpenCL setup
 }

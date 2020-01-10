@@ -6,9 +6,9 @@
 #include <iostream>
 #include <chrono>
 
-#include <OpenCL/cl_gl.h>
-#include <OpenGL/CGLCurrent.h>
 #include <GL/glew.h>
+#include <OpenCL/opencl.h>
+#include <OpenGL/OpenGL.h>
 
 #include "CLUtil.h"
 #include "CLTracer.h"
@@ -44,6 +44,8 @@ CLTracer::~CLTracer()
 
 bool CLTracer::init(const char *programPath)
 {
+//	initAppleCLGL();
+
 	loadPlatformAndDevice();
 	loadContext();
 	loadCommandQueue();
@@ -54,6 +56,7 @@ bool CLTracer::init(const char *programPath)
 	loadKernel(&initializeRenderPlaneKernel, "initializeRenderPlane");
 
 	allocateFixedCLBuffers();
+	setSizeArgs();
 
 	initScene();
 
@@ -136,15 +139,46 @@ void CLTracer::loadContext()
 
 	CGLContextObj cglCurrentContext = CGLGetCurrentContext();
 	CGLShareGroupObj cglShareGroup = CGLGetShareGroup(cglCurrentContext);
+
 	cl_context_properties props[] =
 			{
 					CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties) cglShareGroup,
 					0};
 
-	context = clCreateContext(props, 1, &deviceId, nullptr, nullptr, &clError);
+	context = clCreateContext(props, 1, &deviceId, [](const char *errinfo, const void *private_info, size_t cb, void *user_data) -> void
+	{
+		/* context-creation and runtime error handler */
+		std::cout << "Context error: " << errinfo << std::endl;
+	}, nullptr, &clError);
 	V_RETURN_CL(clError, "Failed to create OpenCL context.");
 
 	std::cout << "Created OpenCL context successfully." << std::endl;
+
+	size_t returnedSize;
+	cl_device_id ids[16];
+
+	clError = clGetContextInfo(context, CL_CONTEXT_DEVICES, sizeof(cl_device_id), (void *) ids, &returnedSize);
+
+	if (clError == CL_SUCCESS)
+	{
+		int deviceCount = returnedSize / sizeof(size_t);
+
+		std::cout << "Got " << deviceCount << " devices: " << ids[1] << std::endl;
+
+		for (int i = 0; i < deviceCount; i++)
+		{
+			char name[1024];
+			size_t actualSize;
+
+			clError = clGetDeviceInfo(ids[i], CL_DEVICE_EXTENSIONS, sizeof(char) * 512, name, &actualSize);
+			V_RETURN_CL(clError, "Failed to read device info");
+			std::cout << "Device[" << i << "]: Extensions - " << name << std::endl;
+
+			clError = clGetDeviceInfo(ids[i], CL_DEVICE_NAME, sizeof(char) * 512, name, &actualSize);
+			V_RETURN_CL(clError, "Failed to read device info");
+			std::cout << "Device[" << i << "]: Name - " << name << std::endl;
+		}
+	}
 }
 
 void CLTracer::loadCommandQueue()
@@ -181,6 +215,10 @@ void CLTracer::clearImage()
 {
 	glFinish();
 
+	cl_int clError;
+
+	clError = clEnqueueNDRangeKernel(commandQueue, clearKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to execute clear kernel");
 
 	clFinish(commandQueue);
 }
@@ -189,46 +227,37 @@ void CLTracer::initializeRenderPlane()
 {
 	glFinish();
 
+	cl_int clError;
+
+	clError = clEnqueueNDRangeKernel(commandQueue, initializeRenderPlaneKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to execute initialization kernel");
 
 	clFinish(commandQueue);
 }
 
-void CLTracer::trace(float *imageData)
+void CLTracer::trace()
 {
 	glFinish();
 
-	size_t textureSize = sizeof(float) * 3 * width * height;
 	auto randomNumberSeed = (float) (rand() / (double) RAND_MAX);
 
 	cl_int clError;
 
-	clError = clEnqueueWriteBuffer(commandQueue, image, CL_FALSE, 0, textureSize, imageData, 0, nullptr, nullptr);
+	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to write data to OpenCL");
 
-	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
-	clError |= clSetKernelArg(renderKernel, 1, sizeof(cl_mem), (void *) &spheres);
-	clError |= clSetKernelArg(renderKernel, 2, sizeof(cl_int), (void *) &sphereCount);
-	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &camera);
-	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
+	clError = clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
 	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_float), (void *) &randomNumberSeed);
 	V_RETURN_CL(clError, "Failed to set kernel arguments");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, renderKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to enqueue kernel task");
 
-	clError = clEnqueueReadBuffer(commandQueue, image, CL_FALSE, 0, textureSize, imageData, 0, nullptr, nullptr);
+	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to read texture from OpenCL");
 
 	iteration++;
 	clFinish(commandQueue);
-}
-
-void CLTracer::linkGLRenderTarget(GLenum textureTarget, GLuint textureId)
-{
-	cl_int clError;
-
-	image = clCreateFromGLTexture(context, CL_MEM_READ_WRITE, textureTarget, 0, textureId, &clError);
-	V_RETURN_CL(clError, "Failed to link GLTexture to CLMem");
 }
 
 void CLTracer::initScene()
@@ -239,6 +268,10 @@ void CLTracer::initScene()
 	V_RETURN_CL(clError, "Failed to allocate space for camera");
 
 	sphereCount = scene.getSphereCount();
+
+	clError = clSetKernelArg(renderKernel, 1, sizeof(cl_mem), (void *) &spheres);
+	clError |= clSetKernelArg(renderKernel, 2, sizeof(cl_int), (void *) &sphereCount);
+	V_RETURN_CL(clError, "Failed to set kernel args for sphere data");
 
 	writeSceneBuffer();
 	writeCameraBuffer();
@@ -273,6 +306,8 @@ void CLTracer::notifySizeChanged(int newWidth, int newHeight)
 	width = newWidth;
 	height = newHeight;
 
+	setSizeArgs();
+
 	setGlobalWorkSize();
 	initializeRenderTargets();
 	resetRendering();
@@ -286,11 +321,20 @@ void CLTracer::setGlobalWorkSize()
 
 void CLTracer::initializeRenderTargets()
 {
+	glFinish();
+
 	cl_int clError;
 
-	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * 3 * width * height, nullptr, &clError);
-	imagePlane = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * 2 * width * height, nullptr, &clError);
-	V_RETURN_CL(clError, "Failed to allocate memory for image");
+	imagePlane = clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, vertexTargetId, &clError);
+	image = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, colorTargetId, &clError);
+	V_RETURN_CL(clError, "Failed to create link to shared resources");
+
+	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
+	clError |= clSetKernelArg(clearKernel, 0, sizeof(cl_mem), (void *) &image);
+	clError |= clSetKernelArg(initializeRenderPlaneKernel, 0, sizeof(cl_mem), (void *) &imagePlane);
+	V_RETURN_CL(clError, "Failed to set kernel args from image color and vertex buffer");
+
+	clFinish(commandQueue);
 }
 
 void CLTracer::allocateFixedCLBuffers()
@@ -299,6 +343,9 @@ void CLTracer::allocateFixedCLBuffers()
 
 	camera = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(Camera), nullptr, &clError);
 	V_RETURN_CL(clError, "Failed to allocate space for camera");
+
+	clError = clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &camera);
+	V_RETURN_CL(clError, "Failed to set kernel arg for camera");
 }
 
 void CLTracer::writeSceneBuffer()
@@ -324,4 +371,78 @@ void CLTracer::writeCameraBuffer()
 	V_RETURN_CL(clError, "Failed to load camera to OpenCL");
 
 	clFinish(commandQueue);
+}
+
+void CLTracer::linkOpenGLResources(GLuint vertexTargetId, GLuint colorTargetId)
+{
+	this->vertexTargetId = vertexTargetId;
+	this->colorTargetId = colorTargetId;
+
+	initializeRenderTargets();
+}
+
+void CLTracer::setSizeArgs()
+{
+	cl_int clError;
+
+	clError = clSetKernelArg(clearKernel, 1, sizeof(cl_int), &width);
+	clError |= clSetKernelArg(clearKernel, 2, sizeof(cl_int), &height);
+	clError |= clSetKernelArg(initializeRenderPlaneKernel, 1, sizeof(cl_int), &width);
+	clError |= clSetKernelArg(initializeRenderPlaneKernel, 2, sizeof(cl_int), &height);
+	V_RETURN_CL(clError, "Failed to set size args to kernels");
+}
+
+void CLTracer::initAppleCLGL()
+{
+	int err;
+	size_t returned_size;
+
+	printf("Using active OpenGL context...\n");
+
+	// Set the sharegroup.
+	CGLContextObj kCGLContext =
+			CGLGetCurrentContext();
+	CGLShareGroupObj kCGLShareGroup =
+			CGLGetShareGroup(kCGLContext);
+
+	gcl_gl_set_sharegroup(kCGLShareGroup);
+
+	// Create a dispatch queue.
+	dispatch_queue_t queue = gcl_create_dispatch_queue(
+			CL_DEVICE_TYPE_GPU, NULL);
+	if (!queue)
+	{
+		printf("Error: Failed to create a dispatch queue!\n");
+	}
+
+	// Create a dispatch semaphore.
+	dispatch_semaphore_t cl_gl_semaphore = dispatch_semaphore_create(0);
+	if (!cl_gl_semaphore)
+	{
+		printf("Error: Failed to create a dispatch semaphore!\n");
+	}
+
+	// Get the device ID.
+	deviceId =
+			gcl_get_device_id_with_dispatch_queue(queue);
+
+	// Report the device vendor and device name.
+	cl_char vendor_name[1024] = {0};
+	cl_char device_name[1024] = {0};
+	err = clGetDeviceInfo(
+			deviceId, CL_DEVICE_VENDOR,
+			sizeof(vendor_name), vendor_name,
+			&returned_size);
+	err |= clGetDeviceInfo(
+			deviceId, CL_DEVICE_NAME,
+			sizeof(device_name), device_name,
+			&returned_size);
+	if (err != CL_SUCCESS)
+	{
+		printf("Error: Failed to retrieve device info!\n");
+	}
+
+	printf(
+			"Connecting to %s %s...\n",
+			vendor_name, device_name);
 }

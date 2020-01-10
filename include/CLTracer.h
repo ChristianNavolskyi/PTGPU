@@ -31,6 +31,9 @@ private:
 	cl_int sphereCount;
 	cl_mem camera;
 
+	GLuint colorTargetId;
+	GLuint vertexTargetId;
+
 	cl_int iteration = 0;
 	size_t localWorkSize[2];
 	size_t globalWorkSize[2];
@@ -65,11 +68,11 @@ public:
 
 	bool init(const char *programPath);
 
+	void linkOpenGLResources(GLuint vertexTargetId, GLuint colorTargetId);
+
 	void changeScene(Scene scene);
 
-	void trace(float *imageData);
-
-	void linkGLRenderTarget(GLenum textureTarget, GLuint textureId);
+	void trace();
 
 	void resetRendering();
 
@@ -82,4 +85,8 @@ public:
 	void writeSceneBuffer();
 
 	void writeCameraBuffer();
+
+	void setSizeArgs();
+
+	void initAppleCLGL();
 };
