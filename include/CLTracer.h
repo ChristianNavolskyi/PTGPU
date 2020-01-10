@@ -68,15 +68,17 @@ public:
 
 	bool init(const char *programPath);
 
+	void initializeRenderPlane(float *imagePlane);
+
 	void linkOpenGLResources(GLuint vertexTargetId, GLuint colorTargetId);
 
 	void changeScene(Scene scene);
 
-	void trace();
+	void trace(float *imageData);
 
 	void resetRendering();
 
-	void notify() override;
+	void notify(Camera camera) override;
 
 	void notifySizeChanged(int newWidth, int newHeight) override;
 

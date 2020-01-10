@@ -16,6 +16,8 @@ struct GLFWReferenceHolder
 {
 	Renderer *renderer;
 	Scene *scene;
+	float *imageData;
+	float *imagePlane;
 	bool mousePressed;
 };
 
@@ -69,6 +71,9 @@ int main(int, char **)
 	}
 
 	size_t localWorkSize[] = {16, 16};
+	float *imageData = (float*) malloc(sizeof(float) * 3 * width * height);
+	float *imagePlane = (float*) malloc(sizeof(float) * 3 * width * height);
+
 	Scene scene(width, height);
 	scene.addSphere(0.f, 1.f, -10.f, 2.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f);
 	scene.addSphere(0.f, 0.f, 200.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
@@ -80,19 +85,22 @@ int main(int, char **)
 
 	CLTracer tracer(scene, localWorkSize);
 	tracer.init("../src/kernels/pathtracer.cl");
-	tracer.linkOpenGLResources(renderer.getVertexBufferId(), renderer.getColorBufferId());
+	tracer.initializeRenderPlane(imagePlane);
+//	tracer.linkOpenGLResources(renderer.getVertexBufferId(), renderer.getColorBufferId());
 
 	GLFWReferenceHolder holder{};
 	holder.renderer = &renderer;
 	holder.scene = &scene;
+	holder.imageData = imageData;
+	holder.imagePlane = imagePlane;
 	holder.mousePressed = false;
 
 	setupCallbacks(window, &holder);
 
 	do
 	{
-		tracer.trace();
-		renderer.render();
+		tracer.trace(holder.imageData);
+		renderer.render(holder.imageData, holder.imagePlane);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -113,6 +121,12 @@ void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
 	{
 		auto holder = (GLFWReferenceHolder *)
 				glfwGetWindowUserPointer(window);
+
+		free(holder->imagePlane);
+		free(holder->imageData);
+
+		holder->imageData = (float*) malloc(sizeof(float) * 3 * width * height);
+		holder->imagePlane = (float*) malloc(sizeof(float) * 2 * width * height);
 
 		holder->renderer->setRenderSize(width, height);
 		holder->scene->changeResolution(width, height);

@@ -235,7 +235,7 @@ void CLTracer::initializeRenderPlane()
 	clFinish(commandQueue);
 }
 
-void CLTracer::trace()
+void CLTracer::trace(float *imageData)
 {
 	glFinish();
 
@@ -243,18 +243,23 @@ void CLTracer::trace()
 
 	cl_int clError;
 
-	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to write data to OpenCL");
+//	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+//	V_RETURN_CL(clError, "Failed to write data to OpenCL");
 
-	clError = clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
+	image = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(float) * 3 * width * height, imageData, &clError);
+
+	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
+	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
 	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_float), (void *) &randomNumberSeed);
 	V_RETURN_CL(clError, "Failed to set kernel arguments");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, renderKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to enqueue kernel task");
 
-	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to read texture from OpenCL");
+	clError = clEnqueueReadBuffer(commandQueue, image, GL_FALSE, 0, sizeof(float) * 3 * width * height, imageData, 0, nullptr, nullptr);
+
+//	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+//	V_RETURN_CL(clError, "Failed to read texture from OpenCL");
 
 	iteration++;
 	clFinish(commandQueue);
@@ -296,7 +301,7 @@ void CLTracer::resetRendering()
 	iteration = 0;
 }
 
-void CLTracer::notify()
+void CLTracer::notify(Camera camera)
 {
 	// TODO (re-)load camera and spheres into gpu memory.
 }
@@ -309,8 +314,8 @@ void CLTracer::notifySizeChanged(int newWidth, int newHeight)
 	setSizeArgs();
 
 	setGlobalWorkSize();
-	initializeRenderTargets();
-	resetRendering();
+//	initializeRenderTargets();
+//	resetRendering();
 }
 
 void CLTracer::setGlobalWorkSize()
@@ -390,6 +395,24 @@ void CLTracer::setSizeArgs()
 	clError |= clSetKernelArg(initializeRenderPlaneKernel, 1, sizeof(cl_int), &width);
 	clError |= clSetKernelArg(initializeRenderPlaneKernel, 2, sizeof(cl_int), &height);
 	V_RETURN_CL(clError, "Failed to set size args to kernels");
+}
+
+void CLTracer::initializeRenderPlane(float *imagePlane)
+{
+	glFinish();
+
+	cl_int clError;
+
+	this->imagePlane = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(float) * 2 * width * height, imagePlane, &clError);
+
+	clError = clSetKernelArg(initializeRenderPlaneKernel, 0, sizeof(cl_mem), (void *) this->imagePlane);
+
+	clError = clEnqueueNDRangeKernel(commandQueue, initializeRenderPlaneKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to execute initialization kernel");
+
+	clError = clEnqueueReadBuffer(commandQueue, this->imagePlane, CL_FALSE, 0, sizeof(float) * 2 * width * height, imagePlane, 0, nullptr, nullptr);
+
+	clFinish(commandQueue);
 }
 
 void CLTracer::initAppleCLGL()

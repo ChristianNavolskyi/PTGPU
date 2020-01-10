@@ -98,14 +98,16 @@ void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath
 	allocateBuffers();
 }
 
-void Renderer::render()
+void Renderer::render(float *imageData, float *imagePlane)
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 2 * width * height, imagePlane, GL_STATIC_DRAW);
 	glVertexPointer(2, GL_FLOAT, 0, nullptr);
 
 	glBindBuffer(GL_ARRAY_BUFFER, colorBufferId);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * width * height, imageData, GL_DYNAMIC_DRAW);
 	glColorPointer(3, GL_FLOAT, 0, nullptr);
 
 	glEnableClientState(GL_VERTEX_ARRAY);

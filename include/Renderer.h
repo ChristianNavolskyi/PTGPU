@@ -24,7 +24,7 @@ public:
 
 	void init(const char *vertexShaderPath, const char *fragmentShaderPath);
 
-	void render();
+	void render(float *pDouble, float *pDouble1);
 
 	void setRenderSize(int width, int height);
 

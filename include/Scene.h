@@ -32,7 +32,7 @@ private:
 	InteractiveCamera camera;
 	RenderInfoListener *changeListener = nullptr;
 
-	void notifyListenerCameraChanged(Camera camera);
+	void notifyListenerCameraChanged();
 
 	void notifyListenerResolutionChanged(int width, int height);
 

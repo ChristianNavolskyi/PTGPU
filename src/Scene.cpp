@@ -25,6 +25,11 @@ void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rC
 	spheres.push_back(sphere);
 }
 
+Camera Scene::getRenderCamera()
+{
+	return camera.createRenderCamera();
+}
+
 void Scene::linkUpdateListener(RenderInfoListener *listener)
 {
 	changeListener = listener;
@@ -101,6 +106,8 @@ void Scene::move(SceneMovementDirections direction)
 		camera.changePitch(-delta);
 		break;
 	}
+
+	notifyListenerCameraChanged();
 }
 
 void Scene::initialMousePosition(float xPos, float yPos)
@@ -111,10 +118,15 @@ void Scene::initialMousePosition(float xPos, float yPos)
 void Scene::updateMousePosition(float xPos, float yPos)
 {
 	camera.handleMouseMovement(xPos, yPos);
-	// TODO reset state
+
+	notifyListenerCameraChanged();
 }
 
-Camera Scene::getRenderCamera()
+void Scene::notifyListenerCameraChanged()
 {
-	return camera.createRenderCamera();
+	if (changeListener) {
+		Camera renderCamera = camera.createRenderCamera();
+
+		changeListener->notify(renderCamera);
+	}
 }

@@ -14,7 +14,7 @@ public:
 
 	virtual ~RenderInfoListener() = default;
 
-	virtual void notify() = 0;
+	virtual void notify(Camera camera) = 0;
 
 	virtual void notifySizeChanged(int newWidth, int newHeight) = 0;
 };
