@@ -45,10 +45,6 @@ public:
 
 	void linkUpdateListener(RenderInfoListener *listener);
 
-	cl_mem createCLSphereBuffer(cl_context context);
-
-	cl_mem createCLCameraBuffer(cl_context context);
-
 	size_t getSphereSize();
 
 	const void *getSphereData();
@@ -64,6 +60,8 @@ public:
 	void move(SceneMovementDirections direction);
 
 	glm::ivec2 getResolution();
+
+	Camera getRenderCamera();
 };
 
 

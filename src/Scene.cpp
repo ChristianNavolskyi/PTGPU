@@ -30,26 +30,6 @@ void Scene::linkUpdateListener(RenderInfoListener *listener)
 	changeListener = listener;
 }
 
-cl_mem Scene::createCLSphereBuffer(cl_context context)
-{
-	cl_int clError;
-
-	cl_mem sphereMemory = clCreateBuffer(context, CL_MEM_READ_ONLY, getSphereSize(), nullptr, &clError);
-	V_RETURN_NULL_CL(clError, "Failed to allocate space for spheres");
-
-	return sphereMemory;
-}
-
-cl_mem Scene::createCLCameraBuffer(cl_context context)
-{
-	cl_int clError;
-
-	cl_mem cameraMemory = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(Camera), nullptr, &clError);
-	V_RETURN_NULL_CL(clError, "Failed to allocate space for camera");
-
-	return cameraMemory;
-}
-
 size_t Scene::getSphereSize()
 {
 	return sizeof(Sphere) * spheres.size();
@@ -132,4 +112,9 @@ void Scene::updateMousePosition(float xPos, float yPos)
 {
 	camera.handleMouseMovement(xPos, yPos);
 	// TODO reset state
+}
+
+Camera Scene::getRenderCamera()
+{
+	return camera.createRenderCamera();
 }

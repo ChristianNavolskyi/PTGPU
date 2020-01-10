@@ -23,11 +23,11 @@ typedef struct Intersection {
 
 typedef struct Camera
 {
-	cl_float3 position;
-	cl_float3 view;
-	cl_float3 up;
-	cl_float2 fov;
-	cl_int2 resolution;
+	float3 position;
+	float3 view;
+	float3 up;
+	float2 fov;
+	int2 resolution;
 } Camera;
 
 #ifndef N_BOUNCES
@@ -164,6 +164,9 @@ bool findIntersection(Ray *cameraRay, Intersection *intersection, __constant Sph
 __kernel void render(__global float *image, __constant Sphere *spheres, const int sphereCount, __constant Camera *camera, const int iteration, const float seed) {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
+    int width = camera->resolution.x;
+    int height = camera->resolution.y;
+
     int pixelPosition = gy * width * 3 + gx * 3;
 
     Ray ray = getCameraRay(gx, gy, width, height);
@@ -171,16 +174,19 @@ __kernel void render(__global float *image, __constant Sphere *spheres, const in
     float3 accumulatedColor = (float3) (0.f, 0.f, 0.f);
     float3 mask = (float3) (1.f, 1.f, 1.f);
 
-    float randomValue = random(seed, (float) gx, (float) gy);
-    float orandomValue = random((float) gx, seed, (float) gy);
+//    float randomValue = random(seed, (float) gx, (float) gy);
+//    float orandomValue = random((float) gx, seed, (float) gy);
 //    float3 color = (float3) (randomValue, orandomValue, randomValue);
-//    setPixelColor3f(image, pixelPosition, spheres[1].position);
+//    setPixelColor3f(image, pixelPosition, color);
 //    return;
 
     for (int i = 0; i < N_BOUNCES; i++) {
         Intersection intersection;
 
         if (findIntersection(&ray, &intersection, spheres, sphereCount)) {
+            accumulatedColor += mask * (float3) (0.7f, 0.3f, 0.7f);
+            break;
+
             float rand1 = random((float) gx, (float) gy, (float) iteration);
             float rand2 = random((float) gx, (float) gy, (float) iteration * iteration);
             float rand2s = sqrt(rand2);
@@ -210,7 +216,7 @@ __kernel void render(__global float *image, __constant Sphere *spheres, const in
     setPixelColor3f(image, pixelPosition, accumulatedColor);
 }
 
-__kernel clearImage(__global float* image, const int width, const int height) {
+__kernel void clearImage(__global float* image, const int width, const int height) {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
 
@@ -219,4 +225,15 @@ __kernel clearImage(__global float* image, const int width, const int height) {
     float3 clearColor = (float3) (0.f, 0.f, 0.f);
 
     setPixelColor3f(image, position, clearColor);
+}
+
+__kernel void initializeRenderPlane(__global float2* image, const int width, const int height) {
+    int gx = get_global_id(0);
+    int gy = get_global_id(1);
+
+    int position = gy * width + gx;
+
+    if (position < width * height) {
+        image[position] = (float2) (gx, gy);
+    }
 }

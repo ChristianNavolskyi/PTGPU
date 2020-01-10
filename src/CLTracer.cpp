@@ -13,7 +13,14 @@
 #include "CLUtil.h"
 #include "CLTracer.h"
 
-CLTracer::CLTracer(Scene scene, const size_t localWorkSize[2]) : platformId(nullptr), commandQueue(nullptr), deviceId(nullptr), context(nullptr), kernel(nullptr), program(nullptr), scene(scene)
+CLTracer::CLTracer(Scene scene, const size_t localWorkSize[2]) : platformId(nullptr),
+																 commandQueue(nullptr),
+																 deviceId(nullptr),
+																 context(nullptr),
+																 renderKernel(nullptr),
+																 clearKernel(nullptr),
+																 initializeRenderPlaneKernel(nullptr),
+																 program(nullptr), scene(scene)
 {
 	this->localWorkSize[0] = localWorkSize[0];
 	this->localWorkSize[1] = localWorkSize[1];
@@ -28,6 +35,7 @@ CLTracer::~CLTracer()
 {
 	clReleaseKernel(renderKernel);
 	clReleaseKernel(clearKernel);
+	clReleaseKernel(initializeRenderPlaneKernel);
 	clReleaseProgram(program);
 	clReleaseCommandQueue(commandQueue);
 	clReleaseContext(context);
@@ -43,6 +51,9 @@ bool CLTracer::init(const char *programPath)
 	loadProgram(programPath);
 	loadKernel(&renderKernel, "render");
 	loadKernel(&clearKernel, "clearImage");
+	loadKernel(&initializeRenderPlaneKernel, "initializeRenderPlane");
+
+	allocateFixedCLBuffers();
 
 	initScene();
 
@@ -161,7 +172,7 @@ void CLTracer::loadKernel(cl_kernel *kernel, const char *kernelName)
 	cl_int clError;
 	*kernel = clCreateKernel(program, kernelName, &clError);
 
-	std::string errorMessage = "Failed to create ";
+	std::string errorMessage = "Failed to create kernel: ";
 	errorMessage += kernelName;
 	V_RETURN_CL(clError, errorMessage);
 }
@@ -174,20 +185,24 @@ void CLTracer::clearImage()
 	clFinish(commandQueue);
 }
 
+void CLTracer::initializeRenderPlane()
+{
+	glFinish();
+
+
+	clFinish(commandQueue);
+}
+
 void CLTracer::trace(float *imageData)
 {
 	glFinish();
 
 	size_t textureSize = sizeof(float) * 3 * width * height;
-	size_t globalWorkSize[2];
-	setGlobalWorkSize();
+	auto randomNumberSeed = (float) (rand() / (double) RAND_MAX);
 
 	cl_int clError;
-	cl_int sphereCount = scene.getSphereCount();
-	float randomNumberSeed = (rand() / (float) RAND_MAX);
 
 	clError = clEnqueueWriteBuffer(commandQueue, image, CL_FALSE, 0, textureSize, imageData, 0, nullptr, nullptr);
-	clError |= clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, scene.getSphereSize(), scene.getSphereData(), 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to write data to OpenCL");
 
 	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
@@ -201,7 +216,7 @@ void CLTracer::trace(float *imageData)
 	clError = clEnqueueNDRangeKernel(commandQueue, renderKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to enqueue kernel task");
 
-	clError = clEnqueueReadBuffer(commandQueue, image, CL_TRUE, 0, textureSize, imageData, 0, nullptr, nullptr);
+	clError = clEnqueueReadBuffer(commandQueue, image, CL_FALSE, 0, textureSize, imageData, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to read texture from OpenCL");
 
 	iteration++;
@@ -218,9 +233,18 @@ void CLTracer::linkGLRenderTarget(GLenum textureTarget, GLuint textureId)
 
 void CLTracer::initScene()
 {
-	camera = scene.createCLCameraBuffer(context);
-	spheres = scene.createCLSphereBuffer(context);
+	cl_int clError;
+
+	spheres = clCreateBuffer(context, CL_MEM_READ_ONLY, scene.getSphereSize(), nullptr, &clError);
+	V_RETURN_CL(clError, "Failed to allocate space for camera");
+
 	sphereCount = scene.getSphereCount();
+
+	writeSceneBuffer();
+	writeCameraBuffer();
+
+	glm::ivec2 resolution = scene.getResolution();
+	notifySizeChanged(resolution.x, resolution.y);
 }
 
 void CLTracer::changeScene(Scene scene)
@@ -228,11 +252,14 @@ void CLTracer::changeScene(Scene scene)
 	this->scene = scene;
 
 	initScene();
-	iteration = 0;
+	resetRendering();
 }
 
 void CLTracer::resetRendering()
 {
+	clearImage();
+	initializeRenderPlane();
+
 	iteration = 0;
 }
 
@@ -246,15 +273,55 @@ void CLTracer::notifySizeChanged(int newWidth, int newHeight)
 	width = newWidth;
 	height = newHeight;
 
-	cl_int clError;
-
-
-	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * 3 * width * height, nullptr, &clError);
-	V_RETURN_CL(clError, "Failed to allocate memory for image");
+	setGlobalWorkSize();
+	initializeRenderTargets();
+	resetRendering();
 }
 
 void CLTracer::setGlobalWorkSize()
 {
 	globalWorkSize[0] = CLUtil::GetGlobalWorkSize(width, localWorkSize[0]);
 	globalWorkSize[1] = CLUtil::GetGlobalWorkSize(height, localWorkSize[1]);
+}
+
+void CLTracer::initializeRenderTargets()
+{
+	cl_int clError;
+
+	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * 3 * width * height, nullptr, &clError);
+	imagePlane = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * 2 * width * height, nullptr, &clError);
+	V_RETURN_CL(clError, "Failed to allocate memory for image");
+}
+
+void CLTracer::allocateFixedCLBuffers()
+{
+	cl_int clError;
+
+	camera = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(Camera), nullptr, &clError);
+	V_RETURN_CL(clError, "Failed to allocate space for camera");
+}
+
+void CLTracer::writeSceneBuffer()
+{
+	glFinish();
+
+	cl_int clError;
+
+	clError = clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, sizeof(scene.getSphereSize()), scene.getSphereData(), 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to load scene to OpenCL");
+
+	clFinish(commandQueue);
+}
+
+void CLTracer::writeCameraBuffer()
+{
+	glFinish();
+
+	cl_int clError;
+
+	Camera renderCamera = scene.getRenderCamera();
+	clError = clEnqueueWriteBuffer(commandQueue, camera, CL_FALSE, 0, sizeof(Camera), &renderCamera, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to load camera to OpenCL");
+
+	clFinish(commandQueue);
 }

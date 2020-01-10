@@ -17,7 +17,6 @@ set(SOURCE_FILES
         include/CLTracer.h
         include/Renderer.h
         include/CLUtil.h
-        include/RenderPlane.h
         include/Scene.h
         include/InteractiveCamera.h
         include/RenderInfoListener.h
@@ -28,7 +27,6 @@ set(SOURCE_FILES
         src/CLTracer.cpp
         src/Renderer.cpp
         src/CLUtil.cpp
-        src/RenderPlane.cpp
         src/Scene.cpp
         src/InteractiveCamera.cpp)
 

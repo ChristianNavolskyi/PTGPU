@@ -6,15 +6,47 @@
 
 #include <GL/glew.h>
 #include <OpenCL/opencl.h>
-#include "RenderPlane.h"
 
 
 class Renderer
 {
 private:
-	GLuint programId;
+	int width, height;
 
-	RenderPlane *plane;
+	GLuint programId;
+	GLuint vertexArrayObjectId;
+	GLuint pixelBufferObject;
+	GLuint vertexBufferObjectId;
+	GLuint textureId;
+	GLuint textureBufferObjectId;
+
+	GLfloat texturePixels[12] = {
+			0.f, 0.f, 0.f, 1.f, 1.f, 1.f,
+			1.f, 1.f, 1.f, 0.f, 0.f, 0.f
+	};
+
+	GLfloat textureCoords[8] = {
+			0.f, 0.f,
+			0.f, 1.f,
+			1.f, 0.f,
+			1.f, 1.f
+	};
+
+#if DEBUG
+	const GLfloat vertices[12] = {
+			-.5f, .5f, 0.f, // top left
+			-.5f, -.5f, 0.f, // bottom left
+			.5f, .5f, 0.f, // top right
+			.5f, -.5f, 0.f  // bottom left
+	};
+#else
+	const GLfloat vertices[12] = {
+			-1.f, 1.f, 0.f, // top left
+			-1.f, -1.f, 0.f, // bottom left
+			1.f, 1.f, 0.f, // top right
+			1.f, -1.f, 0.f  // bottom left
+	};
+#endif
 
 	void setShaderArgs();
 
@@ -27,19 +59,8 @@ public:
 
 	void render(float *imageData);
 
-	void setRenderSize(int width, int height)
-	{
-		plane->updateSize(width, height);
-	}
+	void setRenderSize(int width, int height);
 
-	GLenum getTextureTarget()
-	{
-		return GL_TEXTURE_2D;
-	}
-
-	GLuint getTextureId()
-	{
-		return plane->textureId;
-	}
+	GLuint getRenderTargetId();
 };
 

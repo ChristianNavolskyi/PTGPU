@@ -22,9 +22,11 @@ private:
 
 	cl_kernel renderKernel;
 	cl_kernel clearKernel;
+	cl_kernel initializeRenderPlaneKernel;
 	cl_program program;
 
 	cl_mem image;
+	cl_mem imagePlane;
 	cl_mem spheres;
 	cl_int sphereCount;
 	cl_mem camera;
@@ -48,9 +50,13 @@ private:
 
 	void clearImage();
 
+	void initializeRenderPlane();
+
 	void setGlobalWorkSize();
 
 	void initScene();
+
+	void initializeRenderTargets();
 
 public:
 	explicit CLTracer(Scene scene, const size_t localWorkSize[2]);
@@ -70,4 +76,10 @@ public:
 	void notify() override;
 
 	void notifySizeChanged(int newWidth, int newHeight) override;
+
+	void allocateFixedCLBuffers();
+
+	void writeSceneBuffer();
+
+	void writeCameraBuffer();
 };

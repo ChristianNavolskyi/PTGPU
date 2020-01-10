@@ -51,3 +51,38 @@ void InteractiveCamera::setResolution(int width, int height)
 glm::ivec2 InteractiveCamera::getResolution() {
 	return resolution;
 }
+
+void InteractiveCamera::setInitialMousePosition(float xPos, float yPos)
+{
+
+}
+
+void InteractiveCamera::handleMouseMovement(float xPos, float yPos)
+{
+
+}
+
+void InteractiveCamera::goForward(float delta)
+{
+
+}
+
+void InteractiveCamera::strafe(float delta)
+{
+
+}
+
+void InteractiveCamera::changeAltitude(float delta)
+{
+
+}
+
+void InteractiveCamera::changeYaw(float delta)
+{
+
+}
+
+void InteractiveCamera::changePitch(float delta)
+{
+
+}
