@@ -4,6 +4,9 @@
 
 #include <fstream>
 #include <iostream>
+#include <GL/glew.h>
+#include <cfloat>
+
 #include "Renderer.h"
 
 
@@ -78,15 +81,15 @@ GLuint loadShaders(const char *vertexShaderPath, const char *fragmentShaderPath)
 
 Renderer::Renderer(int width, int height) : programId(0), width(width), height(height)
 {
-	glGenBuffers(1, &vertexBufferId);
-	glGenBuffers(1, &colorBufferId);
 }
 
 Renderer::~Renderer()
 {
 	glDeleteProgram(programId);
+	glDeleteBuffers(1, &vertexArrayId);
 	glDeleteBuffers(1, &vertexBufferId);
-	glDeleteBuffers(1, &colorBufferId);
+	glDeleteBuffers(1, &textureCoordinateBufferId);
+	glDeleteTextures(1, &textureId);
 }
 
 void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath)
@@ -95,57 +98,82 @@ void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath
 
 	glUseProgram(programId);
 
-	allocateBuffers();
+	glGenVertexArrays(1, &vertexArrayId);
+	glBindVertexArray(vertexArrayId);
+
+	GLint attributeLocation;
+	updateTextureCoords();
+
+	glGenBuffers(1, &vertexBufferId);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	attributeLocation = glGetAttribLocation(programId, "POSITION");
+	glVertexAttribPointer(attributeLocation, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+	glEnableVertexAttribArray(attributeLocation);
+
+	glGenBuffers(1, &textureCoordinateBufferId);
+	glBindBuffer(GL_ARRAY_BUFFER, textureCoordinateBufferId);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoords), textureCoords, GL_STATIC_DRAW);
+	attributeLocation = glGetAttribLocation(programId, "TEXTURE_COORDINATE");
+	glVertexAttribPointer(attributeLocation, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+	glEnableVertexAttribArray(attributeLocation);
+
+	glGenTextures(1, &textureId);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, textureId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, texturePixels);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glUniform1i(glGetUniformLocation(programId, "imageTexture"), 0);
+
+	glBindVertexArray(0);
+}
+
+void Renderer::updateTextureCoords()
+{
+	textureCoords[0] = 0.f;
+	textureCoords[1] = 0.f;
+
+	textureCoords[2] = 0.f;
+	textureCoords[3] = (float) height - 1.f;
+
+	textureCoords[4] = (float) width - 1.f;
+	textureCoords[5] = 0.f;
+
+	textureCoords[6] = (float) width - 1.f;
+	textureCoords[7] = (float) height - 1.f;
 }
 
 void Renderer::render()
 {
+	glClearColor(0.f, 0.f, 0.f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
-	glVertexPointer(2, GL_FLOAT, 0, nullptr);
-
-	glBindBuffer(GL_ARRAY_BUFFER, colorBufferId);
-	glColorPointer(3, GL_FLOAT, 0, nullptr);
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glDrawArrays(GL_POINT, 0, width * height);
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(vertexArrayId);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
 
 	glFinish();
 }
 
-void Renderer::setRenderSize(int width, int height)
+void Renderer::setRenderSize(int newWidth, int newHeight)
 {
-	this->width = width;
-	this->height = height;
+	width = newWidth;
+	height = newHeight;
 
-	allocateBuffers();
-}
+	updateTextureCoords();
 
-GLuint Renderer::getVertexBufferId()
-{
-	return vertexBufferId;
-}
-
-GLuint Renderer::getColorBufferId()
-{
-	return colorBufferId;
-}
-
-void Renderer::allocateBuffers()
-{
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 2 * width * height, nullptr, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, colorBufferId);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * width * height, nullptr, GL_DYNAMIC_DRAW);
-
+	glBindBuffer(GL_ARRAY_BUFFER, textureCoordinateBufferId);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoords), textureCoords, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	std::cout << "Allocated OpenGL vertex and color buffer" << std::endl;
+	glBindTexture(GL_TEXTURE_2D, textureId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
 }
 
+GLuint Renderer::getGLTextureReference()
+{
+	return textureId;
+}

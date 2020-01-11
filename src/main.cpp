@@ -68,6 +68,9 @@ int main(int, char **)
 		return -1;
 	}
 
+	width = 2;
+	height = 2;
+
 	size_t localWorkSize[] = {16, 16};
 	Scene scene(width, height);
 	scene.addSphere(0.f, 1.f, -10.f, 2.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f);
@@ -78,9 +81,8 @@ int main(int, char **)
 
 	glFinish();
 
-	CLTracer tracer(scene, localWorkSize);
-	tracer.init("../src/kernels/pathtracer.cl");
-	tracer.linkOpenGLResources(renderer.getVertexBufferId(), renderer.getColorBufferId());
+//	CLTracer tracer(scene, localWorkSize);
+//	tracer.init("../src/kernels/pathtracer.cl", renderer.getGLTextureReference());
 
 	GLFWReferenceHolder holder{};
 	holder.renderer = &renderer;
@@ -91,7 +93,7 @@ int main(int, char **)
 
 	do
 	{
-		tracer.trace();
+//		tracer.trace();
 		renderer.render();
 
 		glfwSwapBuffers(window);
@@ -100,10 +102,6 @@ int main(int, char **)
 
 	glfwTerminate();
 	return 0;
-
-
-	// TODO get keyboard callbacks
-	// TODO OpenCL setup
 }
 
 void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)

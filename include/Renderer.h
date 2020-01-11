@@ -4,18 +4,32 @@
 
 #pragma once
 
-#include <GL/glew.h>
-#include <OpenCL/opencl.h>
-
-
 class Renderer
 {
 private:
 	int width, height;
 
 	GLuint programId;
+	GLuint vertexArrayId;
 	GLuint vertexBufferId;
-	GLuint colorBufferId;
+	GLuint textureCoordinateBufferId;
+	GLuint textureId;
+
+	GLfloat vertices[8] = {
+			-1.f, -1.f, // bl
+			-1.f, 1.f, // tl
+			1.f, -1.f, // br
+			1.f, 1.f, // tr
+	};
+
+	GLfloat textureCoords[8];
+
+	GLfloat texturePixels[12] = {
+			1.f, 0.f, 0.f,
+			0.f, 1.f, 0.f,
+			1.f, 0.f, 1.f,
+			1.f, 1.f, 0.f,
+	};
 
 public:
 	Renderer(int width, int height);
@@ -26,12 +40,10 @@ public:
 
 	void render();
 
-	void setRenderSize(int width, int height);
+	void setRenderSize(int newWidth, int newHeight);
 
-	GLuint getVertexBufferId();
+	GLuint getGLTextureReference();
 
-	GLuint getColorBufferId();
-
-	void allocateBuffers();
+	void updateTextureCoords();
 };
 

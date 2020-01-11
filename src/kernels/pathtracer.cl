@@ -213,7 +213,7 @@ __kernel void render(__global float *image, __constant Sphere *spheres, const in
         }
     }
 
-    if (pixelPosition < width * height) {
+    if (gx < width && gy < height) {
         setPixelColor3f(image, pixelPosition, accumulatedColor);
     }
 }
@@ -226,18 +226,18 @@ __kernel void clearImage(__global float* image, const int width, const int heigh
 
     float3 clearColor = (float3) (1.f, 1.f, 1.f);
 
-    if (position < width * height) {
+    if (gx < width && gy < height) {
         setPixelColor3f(image, position, clearColor);
     }
 }
 
-__kernel void initializeRenderPlane(__global float2* image, const int width, const int height) {
+__kernel void initializeRenderPlane(__global uint2* image, const int width, const int height) {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
 
     int position = gy * width + gx;
 
-    if (position < width * height) {
-        image[position] = (float2) (gx, gy);
+    if (gx < width && gy < height) {
+        image[position] = (uint2) (gx, gy);
     }
 }

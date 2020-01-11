@@ -15,7 +15,6 @@
 class CLTracer : public RenderInfoListener
 {
 private:
-	cl_platform_id platformId;
 	cl_device_id deviceId;
 	cl_context context;
 	cl_command_queue commandQueue;
@@ -31,7 +30,7 @@ private:
 	cl_int sphereCount;
 	cl_mem camera;
 
-	GLuint colorTargetId;
+	GLuint textureTargetId;
 	GLuint vertexTargetId;
 
 	cl_int iteration = 0;
@@ -41,9 +40,9 @@ private:
 
 	int width, height;
 
-	void loadPlatformAndDevice();
-
 	void loadContext();
+
+	void loadDevice();
 
 	void loadCommandQueue();
 
@@ -61,14 +60,14 @@ private:
 
 	void initializeRenderTargets();
 
+	void linkOpenGLResources(GLuint textureBufferId);
+
 public:
 	explicit CLTracer(Scene scene, const size_t localWorkSize[2]);
 
 	~CLTracer();
 
-	bool init(const char *programPath);
-
-	void linkOpenGLResources(GLuint vertexTargetId, GLuint colorTargetId);
+	bool init(const char *programPath, GLuint textureBufferId);
 
 	void changeScene(Scene scene);
 
@@ -87,6 +86,4 @@ public:
 	void writeCameraBuffer();
 
 	void setSizeArgs();
-
-	void initAppleCLGL();
 };
