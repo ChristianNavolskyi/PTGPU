@@ -127,6 +127,10 @@ void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glUniform1i(glGetUniformLocation(programId, "imageTexture"), 0);
 
+	glGenBuffers(1, &pixelBufferId);
+	glBindBuffer(GL_ARRAY_BUFFER, pixelBufferId);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * width * height, nullptr, GL_DYNAMIC_DRAW);
+
 	glBindVertexArray(0);
 
 	setRenderSize(width, height);
@@ -154,10 +158,13 @@ void Renderer::render(float *imageData)
 
 	glBindVertexArray(vertexArrayId);
 
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBufferId);
 	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, imageData);
-
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_FLOAT, nullptr);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
 	glBindVertexArray(0);
 
 	glFinish();
@@ -174,13 +181,18 @@ void Renderer::setRenderSize(int newWidth, int newHeight)
 
 	glBindBuffer(GL_ARRAY_BUFFER, textureCoordinateBufferId);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoords), textureCoords, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, pixelBufferId);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * width * height, nullptr, GL_DYNAMIC_DRAW);
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glBindTexture(GL_TEXTURE_2D, textureId);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, imageData);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 GLuint Renderer::getGLTextureReference()
 {
-	return textureId;
+	return pixelBufferId;
 }

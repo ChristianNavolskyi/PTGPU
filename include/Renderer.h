@@ -12,6 +12,7 @@ private:
 	GLuint programId;
 	GLuint vertexArrayId;
 	GLuint vertexBufferId;
+	GLuint pixelBufferId;
 	GLuint textureCoordinateBufferId;
 	GLuint textureId;
 

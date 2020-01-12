@@ -187,11 +187,11 @@ void CLTracer::clearImage(float *imageData)
 
 	size_t imageSize = sizeof(float) * 4 * width * height;
 
-//	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-//	V_RETURN_CL(clError, "Failed to acquire texture to clear image");
-
-	clError = clEnqueueWriteBuffer(commandQueue, image, GL_FALSE, 0, imageSize, imageData, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to write image to buffer");
+	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to acquire texture to clear image");
+//
+//	clError = clEnqueueWriteBuffer(commandQueue, image, GL_FALSE, 0, imageSize, imageData, 0, nullptr, nullptr);
+//	V_RETURN_CL(clError, "Failed to write image to buffer");
 
 	clError = clSetKernelArg(clearKernel, 0, sizeof(cl_mem), (void *) &image);
 	clError |= clSetKernelArg(clearKernel, 1, sizeof(cl_int), &width);
@@ -201,11 +201,11 @@ void CLTracer::clearImage(float *imageData)
 	clError = clEnqueueNDRangeKernel(commandQueue, clearKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to execute clear kernel");
 
-//	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-//	V_RETURN_CL(clError, "Failed to release texture after clearing image");
-
-	clError = clEnqueueReadBuffer(commandQueue, image, GL_FALSE, 0, imageSize, imageData, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to read image to buffer");
+	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to release texture after clearing image");
+//
+//	clError = clEnqueueReadBuffer(commandQueue, image, GL_FALSE, 0, imageSize, imageData, 0, nullptr, nullptr);
+//	V_RETURN_CL(clError, "Failed to read image to buffer");
 
 	clFinish(commandQueue);
 
@@ -221,11 +221,11 @@ void CLTracer::trace(float *imageData)
 
 	cl_int clError;
 
-//	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-//	V_RETURN_CL(clError, "Failed to write data to OpenCL");
-
-	clError = clEnqueueWriteBuffer(commandQueue, image, GL_FALSE, 0, imageSize, imageData, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to write image to buffer");
+	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to write data to OpenCL");
+//
+//	clError = clEnqueueWriteBuffer(commandQueue, image, GL_FALSE, 0, imageSize, imageData, 0, nullptr, nullptr);
+//	V_RETURN_CL(clError, "Failed to write image to buffer");
 
 	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
 	clError |= clSetKernelArg(renderKernel, 1, sizeof(cl_mem), (void *) &spheres);
@@ -238,11 +238,11 @@ void CLTracer::trace(float *imageData)
 	clError = clEnqueueNDRangeKernel(commandQueue, renderKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to enqueue trace kernel task");
 
-//	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-//	V_RETURN_CL(clError, "Failed to release texture from OpenCL");
-
-	clError = clEnqueueReadBuffer(commandQueue, image, GL_FALSE, 0, imageSize, imageData, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to read image to buffer");
+	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to release texture from OpenCL");
+//
+//	clError = clEnqueueReadBuffer(commandQueue, image, GL_FALSE, 0, imageSize, imageData, 0, nullptr, nullptr);
+//	V_RETURN_CL(clError, "Failed to read image to buffer");
 
 	iteration++;
 	clFinish(commandQueue);
@@ -312,8 +312,8 @@ void CLTracer::updateRenderTarget()
 	cl_int clError;
 
 //	image = clCreateFromGLTexture(context, CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, textureTargetId, &clError);
-//	image = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, textureTargetId, &clError);
-	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_float4) * width * height, nullptr, &clError);
+	image = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, textureTargetId, &clError);
+//	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_float4) * width * height, nullptr, &clError);
 	V_RETURN_CL(clError, "Failed to create link to shared resources");
 
 //	GLenum textureTarget;

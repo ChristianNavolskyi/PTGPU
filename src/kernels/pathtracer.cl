@@ -203,7 +203,7 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
     }
 }
 
-__kernel void clearImage(__global float4 *image, const int width, const int height) {
+__kernel void clearImage(__global float4* image, const int width, const int height) {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
 
@@ -214,6 +214,7 @@ __kernel void clearImage(__global float4 *image, const int width, const int heig
 
     if (gx < width && gy < height) {
         image[position] = clearColor;
+//        write_imagef(image, (int2) (gx, gy), clearColor);
 //        setPixelColor3f(image, position, clearColor);
     }
 }
