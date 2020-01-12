@@ -162,34 +162,13 @@ void CLTracer::clearImage()
 
 	cl_int clError;
 
-	cl_context imageContext;
-	cl_uint imageReferenceCount;
-	size_t memSize;
-	cl_mem_object_type imageType;
-	cl_mem_flags imageFlags;
-
-	// TODO maybe use image instead of float*
-	clError = clGetMemObjectInfo(image, CL_MEM_CONTEXT, sizeof(cl_context), &imageContext, nullptr);
-	clError |= clGetMemObjectInfo(image, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &imageReferenceCount, nullptr);
-	clError |= clGetMemObjectInfo(image, CL_MEM_SIZE, sizeof(size_t), &memSize, nullptr);
-	clError |= clGetMemObjectInfo(image, CL_MEM_TYPE, sizeof(cl_mem_object_type), &imageType, nullptr);
-	clError |= clGetMemObjectInfo(image, CL_MEM_FLAGS, sizeof(cl_mem_flags), &imageFlags, nullptr);
-	V_RETURN_CL(clError, "Failed to get memory info");
-
-	std::cout << "Image mem size: " << memSize << std::endl
-			  << "Image Reference count: " << imageReferenceCount << std::endl
-			  << "image context: " << imageContext << std::endl
-			  << "image object type: " << imageType << std::endl
-			  << "image mem flags: " << imageFlags << std::endl;
-
-
 	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to acquire texture to clear image");
 
 	clError = clSetKernelArg(clearKernel, 0, sizeof(cl_mem), (void *) &image);
 	clError |= clSetKernelArg(clearKernel, 1, sizeof(cl_int), &width);
 	clError |= clSetKernelArg(clearKernel, 2, sizeof(cl_int), &height);
-	V_RETURN_CL(clError, "Failed to set size args to kernels");
+	V_RETURN_CL(clError, "Failed to set args to clear kernels");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, clearKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to execute clear kernel");
@@ -217,13 +196,13 @@ void CLTracer::trace()
 	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &camera);
 	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
 	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_float), (void *) &randomNumberSeed);
-	V_RETURN_CL(clError, "Failed to set kernel arguments");
+	V_RETURN_CL(clError, "Failed to set trace kernel arguments");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, renderKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to enqueue kernel task");
+	V_RETURN_CL(clError, "Failed to enqueue trace kernel task");
 
 	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to read texture from OpenCL");
+	V_RETURN_CL(clError, "Failed to release texture from OpenCL");
 
 	iteration++;
 	clFinish(commandQueue);
