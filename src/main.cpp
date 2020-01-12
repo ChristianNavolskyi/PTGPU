@@ -35,13 +35,11 @@ void showImGuiToolTip(GLFWReferenceHolder *holder)
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::SetWindowSize(ImVec2(100, 100));
-	ImGui::SetWindowPos(ImVec2(100, 100));
-
 	glm::vec3 position = holder->scene->camera.centerPosition;
 	glm::ivec2 resolution = holder->scene->camera.resolution;
 
 	ImGui::Begin("Scene info");
+
 	ImGui::Text("Camera Position: (%f, %f, %f)", position.x, position.y, position.z);
 	ImGui::Text("Camera Yaw: %f", holder->scene->camera.yaw);
 	ImGui::Text("Camera Pitch: %f", holder->scene->camera.pitch);
@@ -117,9 +115,10 @@ int main(int, char **)
 	float *imageData = (float *) malloc(sizeof(float) * 4 * width * height);
 
 	Scene scene(width, height);
-	scene.addSphere(1.25f, -0.75f, -.51f, .16f, .8f, .1f, .1f, .2f, .4f, .4f);
-//	scene.addSphere(0.f, 0.f, 20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
-//	scene.addSphere(1.f, 1.f, 20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
+	scene.addSphere(0.f, -200.4f, 0.f, 200.f, 0.9f, 0.3f, 0.f, 0.f, 0.f, 0.f); // floor
+	scene.addSphere(-0.25f, -0.24f, -0.1f, 0.16f, 0.8f, 0.7f, 0.6f, 0.f, 0.f, 0.f); // left
+	scene.addSphere(0.25f, -0.24f, 0.1f, 0.16f, 0.8f, 0.7f, 0.6f, 0.f, 0.f, 0.f); // right
+	scene.addSphere(0.f, 1.36f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.9f, 0.8f, 0.6f); // light
 //	scene.addSphere(1.f, 1.f, -20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
 
 	Renderer renderer(width, height);

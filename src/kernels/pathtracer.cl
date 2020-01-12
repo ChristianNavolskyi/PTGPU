@@ -193,7 +193,7 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
 
             mask *= dot(ray.direction, intersection.normal);
         } else {
-            accumulatedColor += mask * (float4) (0.3f, 0.3f, 0.7f, 1.f);
+            accumulatedColor += mask * (float4) (0.15f, 0.15f, 0.25f, 1.f);
             break;
         }
     }
