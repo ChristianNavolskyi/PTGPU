@@ -5,7 +5,6 @@
 #include <fstream>
 #include <iostream>
 #include <GL/glew.h>
-#include <cfloat>
 
 #include "Renderer.h"
 
@@ -117,6 +116,10 @@ void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath
 	glVertexAttribPointer(attributeLocation, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 	glEnableVertexAttribArray(attributeLocation);
 
+	glGenBuffers(1, &pixelBufferId);
+	glBindBuffer(GL_ARRAY_BUFFER, pixelBufferId);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * width * height, nullptr, GL_DYNAMIC_DRAW);
+
 	glGenTextures(1, &textureId);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, textureId);
@@ -127,10 +130,8 @@ void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glUniform1i(glGetUniformLocation(programId, "imageTexture"), 0);
 
-	glGenBuffers(1, &pixelBufferId);
-	glBindBuffer(GL_ARRAY_BUFFER, pixelBufferId);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * width * height, nullptr, GL_DYNAMIC_DRAW);
-
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
 
 	setRenderSize(width, height);
@@ -151,11 +152,8 @@ void Renderer::updateTextureCoords()
 	textureCoords[7] = (float) height - 1.f;
 }
 
-void Renderer::render(float *imageData)
+void Renderer::render()
 {
-	glClearColor(0.f, 0.f, 0.f, 1.f);
-	glClear(GL_COLOR_BUFFER_BIT);
-
 	glBindVertexArray(vertexArrayId);
 
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pixelBufferId);
@@ -177,8 +175,6 @@ void Renderer::setRenderSize(int newWidth, int newHeight)
 
 	updateTextureCoords();
 
-	float *imageData = (float *) malloc(sizeof(float) * 4 * width * height);
-
 	glBindBuffer(GL_ARRAY_BUFFER, textureCoordinateBufferId);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoords), textureCoords, GL_STATIC_DRAW);
 
@@ -188,7 +184,7 @@ void Renderer::setRenderSize(int newWidth, int newHeight)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, imageData);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 

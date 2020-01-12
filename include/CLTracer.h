@@ -61,9 +61,9 @@ public:
 
 	void changeScene(Scene *scene);
 
-	void clearImage(float *imageData);
+	void clearImage();
 
-	void trace(float *imageData);
+	void trace();
 
 	void resetRendering();
 

@@ -99,16 +99,13 @@ int main(int, char **)
 	ImGui::CreateContext();
 	ImGuiIO &io = ImGui::GetIO();
 	(void) io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
 	// Setup Platform/Renderer bindings
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init(glsl_version);
 
-// Setup Dear ImGui style
+	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
-	//ImGui::StyleColorsClassic();
 
 
 	size_t localWorkSize[] = {16, 16};
@@ -137,14 +134,14 @@ int main(int, char **)
 	holder.mousePressed = false;
 	holder.showToolTip = true;
 
-	tracer.clearImage(holder.imageData);
+	tracer.clearImage();
 	setupCallbacks(window, &holder);
 
 	do
 	{
 		tracer.updateCamera();
-		tracer.trace(holder.imageData);
-		renderer.render(holder.imageData);
+		tracer.trace();
+		renderer.render();
 
 		if (holder.showToolTip)
 		{

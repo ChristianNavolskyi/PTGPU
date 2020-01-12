@@ -28,7 +28,7 @@ private:
 public:
 	InteractiveCamera(int width, int height);
 
-	~InteractiveCamera();
+	~InteractiveCamera() = default;
 
 	Camera createRenderCamera();
 

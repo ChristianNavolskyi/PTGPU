@@ -15,7 +15,6 @@ set(LIBRARIES ${GLUT_LIBRARY} glfw GLEW::glew imgui ${OpenCL_LIBRARIES})
 
 set(SOURCE_FILES
         # Header files
-        include/CLCompiler.h
         include/CLTracer.h
         include/Renderer.h
         include/CLUtil.h
@@ -25,7 +24,6 @@ set(SOURCE_FILES
 
         # Source files
         src/main.cpp
-        src/CLCompiler.cpp
         src/CLTracer.cpp
         src/Renderer.cpp
         src/apple.c

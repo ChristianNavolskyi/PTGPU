@@ -17,11 +17,6 @@ InteractiveCamera::InteractiveCamera(int width, int height) : centerPosition(0.f
 	setupViewDirection();
 }
 
-InteractiveCamera::~InteractiveCamera()
-{
-
-}
-
 glm::vec3 InteractiveCamera::setupViewDirection()
 {
 	float xDirection = sin(yaw) * cos(pitch);
