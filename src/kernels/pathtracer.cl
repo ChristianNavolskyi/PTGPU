@@ -230,14 +230,3 @@ __kernel void clearImage(__global float* image, const int width, const int heigh
         setPixelColor3f(image, position, clearColor);
     }
 }
-
-__kernel void initializeRenderPlane(__global uint2* image, const int width, const int height) {
-    int gx = get_global_id(0);
-    int gy = get_global_id(1);
-
-    int position = gy * width + gx;
-
-    if (gx < width && gy < height) {
-        image[position] = (uint2) (gx, gy);
-    }
-}

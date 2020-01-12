@@ -14,13 +14,7 @@
 #include "CLTracer.h"
 
 CLTracer::CLTracer(Scene scene, const size_t localWorkSize[2]) :
-		commandQueue(nullptr),
-		deviceId(nullptr),
-		context(nullptr),
-		renderKernel(nullptr),
-		clearKernel(nullptr),
-		initializeRenderPlaneKernel(nullptr),
-		program(nullptr), scene(scene)
+		scene(scene)
 {
 	this->localWorkSize[0] = localWorkSize[0];
 	this->localWorkSize[1] = localWorkSize[1];
@@ -35,7 +29,6 @@ CLTracer::~CLTracer()
 {
 	clReleaseKernel(renderKernel);
 	clReleaseKernel(clearKernel);
-	clReleaseKernel(initializeRenderPlaneKernel);
 	clReleaseProgram(program);
 	clReleaseCommandQueue(commandQueue);
 	clReleaseContext(context);
@@ -51,21 +44,23 @@ bool CLTracer::init(const char *programPath, GLuint textureBufferId)
 	loadProgram(programPath);
 	loadKernel(&renderKernel, "render");
 	loadKernel(&clearKernel, "clearImage");
-	loadKernel(&initializeRenderPlaneKernel, "initializeRenderPlane");
 
-	linkOpenGLResources(textureBufferId);
+	this->textureTargetId = textureBufferId;
 
-	allocateFixedCLBuffers();
+	updateRenderTarget();
 
-	initScene();
+	cl_int clError;
+
+	camera = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(Camera), nullptr, &clError);
+	V_RETURN_FALSE_CL(clError, "Failed to allocate space for camera");
+
+	updateScene();
 
 	return true;
 }
 
 void CLTracer::loadContext()
 {
-	std::cout << "Creating OpenCL shared context..." << std::endl;
-
 	cl_int clError;
 
 	CGLContextObj cglCurrentContext = CGLGetCurrentContext();
@@ -82,14 +77,10 @@ void CLTracer::loadContext()
 		std::cout << "Context error: " << errinfo << std::endl;
 	}, nullptr, &clError);
 	V_RETURN_CL(clError, "Failed to create OpenCL context.");
-
-	std::cout << "Created OpenCL context successfully." << std::endl;
 }
 
 void CLTracer::loadDevice()
 {
-	std::cout << "Setting up OpenCL device..." << std::endl;
-
 	cl_int clError;
 	size_t returnedSize;
 	cl_device_id deviceIds[16];
@@ -131,28 +122,18 @@ void CLTracer::loadDevice()
 		std::cout << "No OpenCL device found - exiting application" << std::endl;
 		exit(-1);
 	}
-	else
-	{
-		std::cout << "Setup OpenCL device successfully" << std::endl;
-	}
 }
 
 void CLTracer::loadCommandQueue()
 {
-	std::cout << "Creating OpenCL command queue..." << std::endl;
-
 	cl_int clError;
 
 	commandQueue = clCreateCommandQueue(context, deviceId, 0, &clError);
 	V_RETURN_CL(clError, "Failed to create command queue");
-
-	std::cout << "Created OpenCL command queue successfully." << std::endl;
 }
 
 void CLTracer::loadProgram(const char *programPath)
 {
-	std::cout << "Loading OpenCL program..." << std::endl;
-
 	std::string programCode;
 
 	CLUtil::LoadProgramSourceToMemory(programPath, programCode);
@@ -163,24 +144,16 @@ void CLTracer::loadProgram(const char *programPath)
 		std::cout << "Failed to load OpenCL program" << std::endl;
 		exit(-1);
 	}
-	else
-	{
-		std::cout << "Loaded OpenCL program successfully" << std::endl;
-	}
 }
 
 void CLTracer::loadKernel(cl_kernel *kernel, const char *kernelName)
 {
-	std::cout << "Loading " << kernelName << " kernel..." << std::endl;
-
 	cl_int clError;
 	*kernel = clCreateKernel(program, kernelName, &clError);
 
 	std::string errorMessage = "Failed to create kernel: ";
 	errorMessage += kernelName;
 	V_RETURN_CL(clError, errorMessage);
-
-	std::cout << "Loaded " << kernelName << " kernel successfully" << std::endl;
 }
 
 void CLTracer::clearImage()
@@ -189,20 +162,40 @@ void CLTracer::clearImage()
 
 	cl_int clError;
 
+	cl_context imageContext;
+	cl_uint imageReferenceCount;
+	size_t memSize;
+	cl_mem_object_type imageType;
+	cl_mem_flags imageFlags;
+
+	// TODO maybe use image instead of float*
+	clError = clGetMemObjectInfo(image, CL_MEM_CONTEXT, sizeof(cl_context), &imageContext, nullptr);
+	clError |= clGetMemObjectInfo(image, CL_MEM_REFERENCE_COUNT, sizeof(cl_uint), &imageReferenceCount, nullptr);
+	clError |= clGetMemObjectInfo(image, CL_MEM_SIZE, sizeof(size_t), &memSize, nullptr);
+	clError |= clGetMemObjectInfo(image, CL_MEM_TYPE, sizeof(cl_mem_object_type), &imageType, nullptr);
+	clError |= clGetMemObjectInfo(image, CL_MEM_FLAGS, sizeof(cl_mem_flags), &imageFlags, nullptr);
+	V_RETURN_CL(clError, "Failed to get memory info");
+
+	std::cout << "Image mem size: " << memSize << std::endl
+			  << "Image Reference count: " << imageReferenceCount << std::endl
+			  << "image context: " << imageContext << std::endl
+			  << "image object type: " << imageType << std::endl
+			  << "image mem flags: " << imageFlags << std::endl;
+
+
+	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to acquire texture to clear image");
+
+	clError = clSetKernelArg(clearKernel, 0, sizeof(cl_mem), (void *) &image);
+	clError |= clSetKernelArg(clearKernel, 1, sizeof(cl_int), &width);
+	clError |= clSetKernelArg(clearKernel, 2, sizeof(cl_int), &height);
+	V_RETURN_CL(clError, "Failed to set size args to kernels");
+
 	clError = clEnqueueNDRangeKernel(commandQueue, clearKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to execute clear kernel");
 
-	clFinish(commandQueue);
-}
-
-void CLTracer::initializeRenderPlane()
-{
-	glFinish();
-
-	cl_int clError;
-
-	clError = clEnqueueNDRangeKernel(commandQueue, initializeRenderPlaneKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to execute initialization kernel");
+	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to release texture after clearing image");
 
 	clFinish(commandQueue);
 }
@@ -218,7 +211,11 @@ void CLTracer::trace()
 	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to write data to OpenCL");
 
-	clError = clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
+	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
+	clError |= clSetKernelArg(renderKernel, 1, sizeof(cl_mem), (void *) &spheres);
+	clError |= clSetKernelArg(renderKernel, 2, sizeof(cl_int), (void *) &sphereCount);
+	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &camera);
+	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
 	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_float), (void *) &randomNumberSeed);
 	V_RETURN_CL(clError, "Failed to set kernel arguments");
 
@@ -232,25 +229,23 @@ void CLTracer::trace()
 	clFinish(commandQueue);
 }
 
-void CLTracer::initScene()
+void CLTracer::updateScene()
 {
-	std::cout << "Creating OpenCL buffer for spheres..." << std::endl;
-
 	cl_int clError;
 
 	spheres = clCreateBuffer(context, CL_MEM_READ_ONLY, scene.getSphereSize(), nullptr, &clError);
 	V_RETURN_CL(clError, "Failed to allocate space for camera");
 
-	std::cout << "Created OpenCL buffer for spheres successfully" << std::endl;
-
 	sphereCount = scene.getSphereCount();
 
-	clError = clSetKernelArg(renderKernel, 1, sizeof(cl_mem), (void *) &spheres);
-	clError |= clSetKernelArg(renderKernel, 2, sizeof(cl_int), (void *) &sphereCount);
-	V_RETURN_CL(clError, "Failed to set kernel args for sphere data");
+	glFinish();
 
-	writeSceneBuffer();
-	writeCameraBuffer();
+	clError = clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, sizeof(scene.getSphereSize()), scene.getSphereData(), 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to load scene to OpenCL");
+
+	clFinish(commandQueue);
+
+	updateCamera();
 
 	glm::ivec2 resolution = scene.getResolution();
 	notifySizeChanged(resolution.x, resolution.y);
@@ -260,21 +255,21 @@ void CLTracer::changeScene(Scene scene)
 {
 	this->scene = scene;
 
-	initScene();
+	updateScene();
 	resetRendering();
 }
 
 void CLTracer::resetRendering()
 {
 	clearImage();
-//	initializeRenderPlane();
 
 	iteration = 0;
 }
 
 void CLTracer::notify()
 {
-	// TODO (re-)load camera and spheres into gpu memory.
+	updateCamera();
+	resetRendering();
 }
 
 void CLTracer::notifySizeChanged(int newWidth, int newHeight)
@@ -282,10 +277,8 @@ void CLTracer::notifySizeChanged(int newWidth, int newHeight)
 	width = newWidth;
 	height = newHeight;
 
-	setSizeArgs();
-
 	setGlobalWorkSize();
-	initializeRenderTargets();
+	updateRenderTarget();
 	resetRendering();
 }
 
@@ -295,88 +288,23 @@ void CLTracer::setGlobalWorkSize()
 	globalWorkSize[1] = CLUtil::GetGlobalWorkSize(height, localWorkSize[1]);
 }
 
-void CLTracer::initializeRenderTargets()
+void CLTracer::updateRenderTarget()
 {
-	std::cout << "Creating OpenCL buffers from OpenGL resources..." << std::endl;
-
-	glFinish();
-
 	cl_int clError;
 
-	image = clCreateFromGLTexture(context, CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, textureTargetId, &clError);
+	image = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, textureTargetId, &clError);
 	V_RETURN_CL(clError, "Failed to create link to shared resources");
-
-	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
-	clError |= clSetKernelArg(clearKernel, 0, sizeof(cl_mem), (void *) &image);
-	V_RETURN_CL(clError, "Failed to set kernel args from image color and vertex buffer");
-
-	clFinish(commandQueue);
-
-	std::cout << "Created OpenCL buffers from OpenGL resources successfully" << std::endl;
 }
 
-void CLTracer::allocateFixedCLBuffers()
+void CLTracer::updateCamera()
 {
-	std::cout << "Creating OpenCL buffer for camera..." << std::endl;
-
-	cl_int clError;
-
-	camera = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(Camera), nullptr, &clError);
-	V_RETURN_CL(clError, "Failed to allocate space for camera");
-
-	clError = clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &camera);
-	V_RETURN_CL(clError, "Failed to set kernel arg for camera");
-
-	std::cout << "Created OpenCL buffer for camera successfully" << std::endl;
-}
-
-void CLTracer::writeSceneBuffer()
-{
-	std::cout << "Writing spheres to OpenCL buffer..." << std::endl;
-
-	glFinish();
-
-	cl_int clError;
-
-	clError = clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, sizeof(scene.getSphereSize()), scene.getSphereData(), 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to load scene to OpenCL");
-
-	clFinish(commandQueue);
-
-	std::cout << "Wrote spheres to OpenCL buffer successfully" << std::endl;
-}
-
-void CLTracer::writeCameraBuffer()
-{
-	std::cout << "Writing camera to OpenCL buffer..." << std::endl;
-
 	glFinish();
 
 	cl_int clError;
 
 	Camera renderCamera = scene.getRenderCamera();
-	clError = clEnqueueWriteBuffer(commandQueue, camera, CL_FALSE, 0, sizeof(Camera), &renderCamera, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to load camera to OpenCL");
+	clError |= clEnqueueWriteBuffer(commandQueue, camera, CL_FALSE, 0, sizeof(Camera), &renderCamera, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to load scene and/or camera to OpenCL");
 
 	clFinish(commandQueue);
-
-	std::cout << "Wrote camera to OpenCL buffer successfully" << std::endl;
-}
-
-void CLTracer::linkOpenGLResources(GLuint textureBufferId)
-{
-	this->textureTargetId = textureBufferId;
-
-	initializeRenderTargets();
-}
-
-void CLTracer::setSizeArgs()
-{
-	cl_int clError;
-
-	clError = clSetKernelArg(clearKernel, 1, sizeof(cl_int), &width);
-	clError |= clSetKernelArg(clearKernel, 2, sizeof(cl_int), &height);
-	clError |= clSetKernelArg(initializeRenderPlaneKernel, 1, sizeof(cl_int), &width);
-	clError |= clSetKernelArg(initializeRenderPlaneKernel, 2, sizeof(cl_int), &height);
-	V_RETURN_CL(clError, "Failed to set size args to kernels");
 }

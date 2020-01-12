@@ -102,7 +102,6 @@ void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath
 	glBindVertexArray(vertexArrayId);
 
 	GLint attributeLocation;
-	updateTextureCoords();
 
 	glGenBuffers(1, &vertexBufferId);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferId);
@@ -129,6 +128,8 @@ void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath
 	glUniform1i(glGetUniformLocation(programId, "imageTexture"), 0);
 
 	glBindVertexArray(0);
+
+	setRenderSize(width, height);
 }
 
 void Renderer::updateTextureCoords()

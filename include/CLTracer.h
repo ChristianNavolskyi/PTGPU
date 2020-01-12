@@ -15,30 +15,27 @@
 class CLTracer : public RenderInfoListener
 {
 private:
-	cl_device_id deviceId;
-	cl_context context;
-	cl_command_queue commandQueue;
+	cl_device_id deviceId = nullptr;
+	cl_context context = nullptr;
+	cl_command_queue commandQueue = nullptr;
 
-	cl_kernel renderKernel;
-	cl_kernel clearKernel;
-	cl_kernel initializeRenderPlaneKernel;
-	cl_program program;
+	cl_kernel renderKernel = nullptr;
+	cl_kernel clearKernel = nullptr;
+	cl_program program = nullptr;
 
-	cl_mem image;
-	cl_mem imagePlane;
-	cl_mem spheres;
-	cl_int sphereCount;
-	cl_mem camera;
+	cl_mem image = nullptr;
+	cl_mem camera = nullptr;
+	cl_mem spheres = nullptr;
+	cl_int sphereCount = 0;
 
-	GLuint textureTargetId;
-	GLuint vertexTargetId;
+	GLuint textureTargetId = 0;
 
 	cl_int iteration = 0;
-	size_t localWorkSize[2];
-	size_t globalWorkSize[2];
+	size_t localWorkSize[2] = {0, 0};
+	size_t globalWorkSize[2] = {0, 0};
 	Scene scene;
 
-	int width, height;
+	int width = 0, height = 0;
 
 	void loadContext();
 
@@ -52,15 +49,11 @@ private:
 
 	void clearImage();
 
-	void initializeRenderPlane();
-
 	void setGlobalWorkSize();
 
-	void initScene();
+	void updateScene();
 
-	void initializeRenderTargets();
-
-	void linkOpenGLResources(GLuint textureBufferId);
+	void updateRenderTarget();
 
 public:
 	explicit CLTracer(Scene scene, const size_t localWorkSize[2]);
@@ -79,11 +72,5 @@ public:
 
 	void notifySizeChanged(int newWidth, int newHeight) override;
 
-	void allocateFixedCLBuffers();
-
-	void writeSceneBuffer();
-
-	void writeCameraBuffer();
-
-	void setSizeArgs();
+	void updateCamera();
 };
