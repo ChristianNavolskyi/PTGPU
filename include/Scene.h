@@ -10,16 +10,16 @@
 #include "InteractiveCamera.h"
 #include "RenderInfoListener.h"
 
-struct Sphere
+typedef struct Sphere
 {
 	cl_float radius;
 	cl_float dummy0;
 	cl_float dummy1;
 	cl_float dummy2;
 	cl_float3 position;
-	cl_float3 color;
-	cl_float3 emittance;
-};
+	cl_float4 color;
+	cl_float4 emittance;
+} Sphere;
 
 enum SceneMovementDirections
 {
@@ -47,7 +47,7 @@ public:
 
 	size_t getSphereSize();
 
-	const void *getSphereData();
+	const Sphere *getSphereData();
 
 	cl_int getSphereCount();
 

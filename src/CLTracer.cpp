@@ -259,7 +259,7 @@ void CLTracer::updateScene()
 
 	glFinish();
 
-	clError = clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, sizeof(scene->getSphereSize()), scene->getSphereData(), 0, nullptr, nullptr);
+	clError = clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, scene->getSphereSize(), scene->getSphereData(), 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to load scene to OpenCL");
 
 	clFinish(commandQueue);

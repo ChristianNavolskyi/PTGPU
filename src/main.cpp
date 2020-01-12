@@ -117,7 +117,7 @@ int main(int, char **)
 	float *imageData = (float *) malloc(sizeof(float) * 4 * width * height);
 
 	Scene scene(width, height);
-	scene.addSphere(0.25f, -0.75f, -.51f, .16f, .8f, .1f, .1f, .2f, .4f, .4f);
+	scene.addSphere(1.25f, -0.75f, -.51f, .16f, .8f, .1f, .1f, .2f, .4f, .4f);
 //	scene.addSphere(0.f, 0.f, 20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
 //	scene.addSphere(1.f, 1.f, 20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
 //	scene.addSphere(1.f, 1.f, -20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);

@@ -20,8 +20,8 @@ void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rC
 	Sphere sphere{};
 	sphere.radius = radius;
 	sphere.position = {{xPos, yPos, zPos}};
-	sphere.color = {{rColor, gColor, bColor}};
-	sphere.emittance = {{rEmittance, gEmittance, bEmittance}};
+	sphere.color = {{rColor, gColor, bColor, 1.f}};
+	sphere.emittance = {{rEmittance, gEmittance, bEmittance, 1.f}};
 
 	spheres.push_back(sphere);
 }
@@ -41,9 +41,9 @@ size_t Scene::getSphereSize()
 	return sizeof(Sphere) * spheres.size();
 }
 
-const void *Scene::getSphereData()
+const Sphere *Scene::getSphereData()
 {
-	return spheres.data();
+	return &spheres[0];
 }
 
 cl_int Scene::getSphereCount()

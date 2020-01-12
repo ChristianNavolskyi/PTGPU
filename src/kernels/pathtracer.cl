@@ -161,7 +161,7 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
     int width = camera->resolution.x;
     int height = camera->resolution.y;
 
-    int pixelPosition = gy * width + gx;
+    int position = gy * width + gx;
 
     Ray ray = getCameraRay(camera, gx, gy);
 
@@ -199,7 +199,7 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
     }
 
     if (gx < width && gy < height) {
-        image[pixelPosition] = accumulatedColor;
+        image[position] = accumulatedColor;
     }
 }
 
