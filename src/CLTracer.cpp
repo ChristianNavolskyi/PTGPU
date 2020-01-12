@@ -40,8 +40,7 @@ void printImageData(cl_command_queue commandQueue, cl_mem image, int width, int 
 	free(imageData);
 }
 
-CLTracer::CLTracer(Scene scene, const size_t localWorkSize[2]) :
-		scene(scene)
+CLTracer::CLTracer(Scene *scene, const size_t localWorkSize[2]) : scene(scene)
 {
 	this->localWorkSize[0] = localWorkSize[0];
 	this->localWorkSize[1] = localWorkSize[1];
@@ -49,7 +48,7 @@ CLTracer::CLTracer(Scene scene, const size_t localWorkSize[2]) :
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
 	srand48(time);
-	scene.linkUpdateListener(this);
+	scene->linkUpdateListener(this);
 }
 
 CLTracer::~CLTracer()
@@ -217,7 +216,6 @@ void CLTracer::trace(float *imageData)
 {
 	glFinish();
 
-	size_t textureSize = sizeof(float) * 3 * width * height;
 	auto randomNumberSeed = (float) (rand() / (double) RAND_MAX);
 	size_t imageSize = sizeof(float) * 4 * width * height;
 
@@ -254,25 +252,25 @@ void CLTracer::updateScene()
 {
 	cl_int clError;
 
-	spheres = clCreateBuffer(context, CL_MEM_READ_ONLY, scene.getSphereSize(), nullptr, &clError);
+	spheres = clCreateBuffer(context, CL_MEM_READ_ONLY, scene->getSphereSize(), nullptr, &clError);
 	V_RETURN_CL(clError, "Failed to allocate space for camera");
 
-	sphereCount = scene.getSphereCount();
+	sphereCount = scene->getSphereCount();
 
 	glFinish();
 
-	clError = clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, sizeof(scene.getSphereSize()), scene.getSphereData(), 0, nullptr, nullptr);
+	clError = clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, sizeof(scene->getSphereSize()), scene->getSphereData(), 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to load scene to OpenCL");
 
 	clFinish(commandQueue);
 
 	updateCamera();
 
-	glm::ivec2 resolution = scene.getResolution();
+	glm::ivec2 resolution = scene->getResolution();
 	notifySizeChanged(resolution.x, resolution.y);
 }
 
-void CLTracer::changeScene(Scene scene)
+void CLTracer::changeScene(Scene *scene)
 {
 	this->scene = scene;
 
@@ -282,7 +280,7 @@ void CLTracer::changeScene(Scene scene)
 
 void CLTracer::resetRendering()
 {
-	clearImage(nullptr);
+//	clearImage(nullptr);
 
 	iteration = 0;
 }
@@ -333,10 +331,8 @@ void CLTracer::updateCamera()
 
 	cl_int clError;
 
-	clFinish(commandQueue);
-
-	Camera renderCamera = scene.getRenderCamera();
-	clError |= clEnqueueWriteBuffer(commandQueue, camera, CL_TRUE, 0, sizeof(Camera), &renderCamera, 0, nullptr, nullptr);
+	Camera renderCamera = scene->getRenderCamera();
+	clError = clEnqueueWriteBuffer(commandQueue, camera, CL_TRUE, 0, sizeof(Camera), &renderCamera, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to load scene and/or camera to OpenCL");
 
 	clFinish(commandQueue);

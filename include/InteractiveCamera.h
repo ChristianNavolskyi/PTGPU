@@ -19,18 +19,9 @@ struct Camera
 class InteractiveCamera
 {
 private:
-	glm::ivec2 resolution;
-	glm::vec2 fov;
-	glm::vec3 centerPosition;
-	glm::vec3 viewDirection;
-	glm::vec3 strafeAxis;
-	float yaw;
-	float pitch;
-	float radius;
-
 	float lastXPos = 0.f, lastYPos = 0.f;
 
-	 float padding = 0.001f;
+	float padding = 0.001f;
 
 	glm::vec3 setupViewDirection();
 
@@ -60,6 +51,15 @@ public:
 	void changeYaw(float delta);
 
 	void changePitch(float delta);
+
+	glm::ivec2 resolution;
+	glm::vec2 fov;
+	glm::vec3 centerPosition;
+	glm::vec3 viewDirection;
+	glm::vec3 strafeAxis;
+	float yaw;
+	float pitch;
+	float radius;
 };
 
 

@@ -21,7 +21,8 @@ struct Sphere
 	cl_float3 emittance;
 };
 
-enum SceneMovementDirections {
+enum SceneMovementDirections
+{
 	UP, DOWN, LEFT, RIGHT, FORWARD, BACKWARD, YAW_LEFT, YAW_RIGHT, PITCH_DOWN, PITCH_UP
 };
 
@@ -29,7 +30,6 @@ class Scene
 {
 private:
 	std::vector<Sphere> spheres;
-	InteractiveCamera camera;
 	RenderInfoListener *changeListener = nullptr;
 
 	void notifyListenerCameraChanged();
@@ -62,6 +62,8 @@ public:
 	glm::ivec2 getResolution();
 
 	Camera getRenderCamera();
+
+	InteractiveCamera camera;
 };
 
 

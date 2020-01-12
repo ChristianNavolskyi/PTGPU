@@ -8,14 +8,18 @@
 #include <Renderer.h>
 #include <CLTracer.h>
 #include <Scene.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 
 
 struct GLFWReferenceHolder
 {
 	Renderer *renderer;
+	CLTracer *tracer;
 	Scene *scene;
 	float *imageData;
 	bool mousePressed;
+	bool showToolTip;
 };
 
 void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder);
@@ -23,6 +27,31 @@ void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder);
 static void printError(const char *description)
 {
 	std::cerr << description << std::endl;
+}
+
+void showImGuiToolTip(GLFWReferenceHolder *holder)
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::SetWindowSize(ImVec2(100, 100));
+	ImGui::SetWindowPos(ImVec2(100, 100));
+
+	glm::vec3 position = holder->scene->camera.centerPosition;
+	glm::ivec2 resolution = holder->scene->camera.resolution;
+
+	ImGui::Begin("Scene info");
+	ImGui::Text("Camera Position: (%f, %f, %f)", position.x, position.y, position.z);
+	ImGui::Text("Camera Yaw: %f", holder->scene->camera.yaw);
+	ImGui::Text("Camera Pitch: %f", holder->scene->camera.pitch);
+	ImGui::Text("Camera Resolution: (%d, %d)", resolution.x, resolution.y);
+	ImGui::Text("Iteration: %d", holder->tracer->iteration);
+
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 int main(int, char **)
@@ -36,7 +65,7 @@ int main(int, char **)
 		return -1;
 	}
 
-	const char *glsl_version = "#version 150";
+	const char *glsl_version = "#version 330";
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
@@ -67,11 +96,28 @@ int main(int, char **)
 		return -1;
 	}
 
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO &io = ImGui::GetIO();
+	(void) io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+	// Setup Platform/Renderer bindings
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init(glsl_version);
+
+// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsClassic();
+
+
 	size_t localWorkSize[] = {16, 16};
 	float *imageData = (float *) malloc(sizeof(float) * 4 * width * height);
 
 	Scene scene(width, height);
-	scene.addSphere(0.25f, -0.75f, -.51f, .16f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f);
+	scene.addSphere(0.25f, -0.75f, -.51f, .16f, .8f, .1f, .1f, .2f, .4f, .4f);
 //	scene.addSphere(0.f, 0.f, 20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
 //	scene.addSphere(1.f, 1.f, 20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
 //	scene.addSphere(1.f, 1.f, -20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
@@ -79,26 +125,32 @@ int main(int, char **)
 	Renderer renderer(width, height);
 	renderer.init("../src/shaders/shader.vert", "../src/shaders/shader.frag");
 
+	glFinish();
+
+	CLTracer tracer(&scene, localWorkSize);
+	tracer.init("../src/kernels/pathtracer.cl", renderer.getGLTextureReference());
+
 	GLFWReferenceHolder holder{};
 	holder.renderer = &renderer;
+	holder.tracer = &tracer;
 	holder.scene = &scene;
 	holder.imageData = imageData;
 	holder.mousePressed = false;
-
-	glFinish();
-
-	CLTracer tracer(scene, localWorkSize);
-	tracer.init("../src/kernels/pathtracer.cl", renderer.getGLTextureReference());
-	scene.linkUpdateListener(&tracer);
-
-	setupCallbacks(window, &holder);
+	holder.showToolTip = true;
 
 	tracer.clearImage(holder.imageData);
+	setupCallbacks(window, &holder);
 
 	do
 	{
+		tracer.updateCamera();
 		tracer.trace(holder.imageData);
 		renderer.render(holder.imageData);
+
+		if (holder.showToolTip)
+		{
+			showImGuiToolTip(&holder);
+		}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -159,7 +211,8 @@ void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
 	{
 		if (action == GLFW_PRESS || action == GLFW_REPEAT)
 		{
-			auto scene = ((GLFWReferenceHolder *) glfwGetWindowUserPointer(window))->scene;
+			auto holder = ((GLFWReferenceHolder *) glfwGetWindowUserPointer(window));
+			auto scene = holder->scene;
 
 			switch (key)
 			{
@@ -180,6 +233,9 @@ void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
 				break;
 			case GLFW_KEY_F:
 				scene->move(DOWN);
+				break;
+			case GLFW_KEY_T:
+				holder->showToolTip = !holder->showToolTip;
 				break;
 			case GLFW_KEY_LEFT:
 				scene->move(YAW_LEFT);

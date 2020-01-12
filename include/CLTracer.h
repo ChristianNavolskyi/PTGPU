@@ -30,10 +30,9 @@ private:
 
 	GLuint textureTargetId = 0;
 
-	cl_int iteration = 0;
 	size_t localWorkSize[2] = {0, 0};
 	size_t globalWorkSize[2] = {0, 0};
-	Scene scene;
+	Scene *scene;
 
 	int width = 0, height = 0;
 
@@ -54,13 +53,13 @@ private:
 	void updateRenderTarget();
 
 public:
-	explicit CLTracer(Scene scene, const size_t localWorkSize[2]);
+	explicit CLTracer(Scene *scene, const size_t localWorkSize[2]);
 
 	~CLTracer();
 
 	bool init(const char *programPath, GLuint textureBufferId);
 
-	void changeScene(Scene scene);
+	void changeScene(Scene *scene);
 
 	void clearImage(float *imageData);
 
@@ -73,4 +72,6 @@ public:
 	void notifySizeChanged(int newWidth, int newHeight) override;
 
 	void updateCamera();
+
+	cl_int iteration = 0;
 };

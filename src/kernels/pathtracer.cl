@@ -19,7 +19,6 @@ typedef struct Intersection {
     float3 normal;
     float t;
     Sphere *sphere;
-    int sphereId;
 } Intersection;
 
 typedef struct Camera
@@ -32,11 +31,7 @@ typedef struct Camera
 } Camera;
 
 #ifndef N_BOUNCES
-#define N_BOUNCES 1
-#endif
-
-#ifndef CAMERA_DISTANCE
-#define CAMERA_DISTANCE 1.f
+#define N_BOUNCES 8
 #endif
 
 #define EPSILON 0.00001f
@@ -45,7 +40,6 @@ typedef struct Camera
 static float noise3D(float x, float y, float z);
 float3 sampleCosHemisphere(float exp, float rand1, float rand2);
 float3 transformIntoWorldSpace(float3 normal, float3 direction);
-void setPixelColor3f(__global float* image, int position, float3 color);
 Ray getCameraRay(__constant Camera *camera, int x, int y);
 bool intersectSphere(Sphere *sphere, Ray *ray, float *t1, float *t2);
 bool findIntersection(Ray *cameraRay, Intersection *intersection, __constant Sphere *spheres, int sphereCount);
@@ -68,12 +62,6 @@ float3 transformIntoWorldSpace(float3 normal, float3 direction) {
     float3 f = normalize(cross(normal, e));
 
     return (float3) (dot(e, direction), dot(f, direction), dot(normal, direction));
-}
-
-void setPixelColor3f(__global float* image, int position, float3 color) {
-    image[position] = color.r;
-    image[position + 1] = color.g;
-    image[position + 2] = color.b;
 }
 
 Ray getCameraRay(__constant Camera *camera, int x, int y) {
@@ -154,7 +142,6 @@ bool findIntersection(Ray *cameraRay, Intersection *intersection, __constant Sph
                 intersection->t = t2;
             }
             intersection->sphere = &sphere;
-            intersection->sphereId = i;
         }
     }
 
@@ -181,23 +168,10 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
     float4 accumulatedColor = (float4) (0.f, 0.f, 0.f, 0.f);
     float4 mask = (float4) (1.f, 1.f, 1.f, 1.f);
 
-//    float randomValue = random(seed, (float) gx, (float) gy);
-//    float orandomValue = random((float) gx, seed, (float) gy);
-//    float4 color = (float4) ((ray.direction + (float3) (1.f, 1.f, 0.f))/2.f, 1.f);
-//
-//    if (gx < width && gy < height) {
-//        image[pixelPosition] = color;
-//    }
-//
-//    return;
-
     for (int i = 0; i < N_BOUNCES; i++) {
         Intersection intersection;
 
         if (findIntersection(&ray, &intersection, spheres, sphereCount)) {
-            accumulatedColor += mask * (float4) (1.f, 0.0f, 0.0f, 1.f);
-            break;
-
             float rand1 = random((float) gx, (float) gy, (float) iteration);
             float rand2 = random((float) gx, (float) gy, (float) iteration * iteration);
             float rand2s = sqrt(rand2);
@@ -206,9 +180,9 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
             float3 u = normalize((float3) (0.f, -w.z, w.y));
             float3 v = normalize(cross(w, u));
 
-            float3 newdir = normalize(u * cos(rand1)*rand2s + v*sin(rand1)*rand2s + w*sqrt(1.0f - rand2));
+            float3 newdir = normalize(u * cos(rand1) * rand2s + v * sin(rand1) * rand2s + w * sqrt(1.0f - rand2));
 
-            float3 sampleOnHemisphere = transformIntoWorldSpace(intersection.normal, sampleCosHemisphere(0.f, rand1, rand2));
+//            float3 sampleOnHemisphere = transformIntoWorldSpace(intersection.normal, sampleCosHemisphere(0.f, rand1, rand2));
 
             ray.origin = intersection.position + intersection.normal * EPSILON;
             ray.direction = newdir;

@@ -7,6 +7,7 @@
 
 Scene::Scene(int width, int height) : spheres(), camera(width, height)
 {
+	camera = InteractiveCamera(width, height);
 }
 
 Scene::~Scene()
@@ -106,8 +107,6 @@ void Scene::move(SceneMovementDirections direction)
 		camera.changePitch(-delta);
 		break;
 	}
-
-	std::cout << "moved" << std::endl;
 
 	notifyListenerCameraChanged();
 }
