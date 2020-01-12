@@ -1,8 +1,6 @@
 
 #include <imgui/imgui.h>
 #include <cstdio>
-#include <string>
-#include <fstream>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -16,6 +14,7 @@ struct GLFWReferenceHolder
 {
 	Renderer *renderer;
 	Scene *scene;
+	float *imageData;
 	bool mousePressed;
 };
 
@@ -68,6 +67,11 @@ int main(int, char **)
 		return -1;
 	}
 
+//	width = 20;
+//	height = 20;
+
+	float *imageData = (float *) malloc(sizeof(float) * 3 * width * height);
+
 	size_t localWorkSize[] = {16, 16};
 	Scene scene(width, height);
 	scene.addSphere(0.f, 1.f, -10.f, 2.f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f);
@@ -76,22 +80,25 @@ int main(int, char **)
 	Renderer renderer(width, height);
 	renderer.init("../src/shaders/shader.vert", "../src/shaders/shader.frag");
 
+	GLFWReferenceHolder holder{};
+	holder.renderer = &renderer;
+	holder.scene = &scene;
+	holder.imageData = imageData;
+	holder.mousePressed = false;
+
 	glFinish();
 
 	CLTracer tracer(scene, localWorkSize);
 	tracer.init("../src/kernels/pathtracer.cl", renderer.getGLTextureReference());
 
-	GLFWReferenceHolder holder{};
-	holder.renderer = &renderer;
-	holder.scene = &scene;
-	holder.mousePressed = false;
-
 	setupCallbacks(window, &holder);
+
+	tracer.clearImage(holder.imageData);
 
 	do
 	{
-		tracer.trace();
-		renderer.render();
+//		tracer.trace(holder.imageData);
+		renderer.render(holder.imageData);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -108,6 +115,10 @@ void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
 	{
 		auto holder = (GLFWReferenceHolder *)
 				glfwGetWindowUserPointer(window);
+
+		free(holder->imageData);
+
+		holder->imageData = (float *) malloc(sizeof(float) * 3 * width * height);
 
 		holder->renderer->setRenderSize(width, height);
 		holder->scene->changeResolution(width, height);

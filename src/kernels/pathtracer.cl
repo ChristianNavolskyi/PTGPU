@@ -224,7 +224,8 @@ __kernel void clearImage(__global float* image, const int width, const int heigh
 
     int position = gy * width * 3 + gx * 3;
 
-    float3 clearColor = (float3) (1.f, 1.f, 1.f);
+    float3 clearColor = (float3) (gx / (float) width, gy / (float) height, 1.f);
+//    float3 clearColor = (float3) (0.f, 1.f, 0.f);
 
     if (gx < width && gy < height) {
         setPixelColor3f(image, position, clearColor);

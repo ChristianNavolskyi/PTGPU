@@ -147,12 +147,16 @@ void Renderer::updateTextureCoords()
 	textureCoords[7] = (float) height - 1.f;
 }
 
-void Renderer::render()
+void Renderer::render(float *imageData)
 {
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glBindVertexArray(vertexArrayId);
+
+	glBindTexture(GL_TEXTURE_2D, textureId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, imageData);
+
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindVertexArray(0);
 
@@ -166,12 +170,14 @@ void Renderer::setRenderSize(int newWidth, int newHeight)
 
 	updateTextureCoords();
 
+	float *imageData = (float *) malloc(sizeof(float) * 3 * width * height);
+
 	glBindBuffer(GL_ARRAY_BUFFER, textureCoordinateBufferId);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoords), textureCoords, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	glBindTexture(GL_TEXTURE_2D, textureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, imageData);
 }
 
 GLuint Renderer::getGLTextureReference()

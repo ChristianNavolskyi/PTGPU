@@ -47,8 +47,6 @@ private:
 
 	void loadKernel(cl_kernel *kernel, const char *kernelName);
 
-	void clearImage();
-
 	void setGlobalWorkSize();
 
 	void updateScene();
@@ -64,7 +62,9 @@ public:
 
 	void changeScene(Scene scene);
 
-	void trace();
+	void clearImage(float *imageData);
+
+	void trace(float *imageData);
 
 	void resetRendering();
 

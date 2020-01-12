@@ -38,7 +38,7 @@ public:
 
 	void init(const char *vertexShaderPath, const char *fragmentShaderPath);
 
-	void render();
+	void render(float *imageData);
 
 	void setRenderSize(int newWidth, int newHeight);
 
