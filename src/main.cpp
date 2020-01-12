@@ -67,9 +67,9 @@ int main(int, char **)
 		return -1;
 	}
 
+	size_t localWorkSize[] = {16, 16};
 	float *imageData = (float *) malloc(sizeof(float) * 4 * width * height);
 
-	size_t localWorkSize[] = {16, 16};
 	Scene scene(width, height);
 	scene.addSphere(0.25f, -0.75f, -.51f, .16f, 1.f, 0.f, 0.f, 1.f, 0.f, 0.f);
 //	scene.addSphere(0.f, 0.f, 20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
@@ -89,6 +89,7 @@ int main(int, char **)
 
 	CLTracer tracer(scene, localWorkSize);
 	tracer.init("../src/kernels/pathtracer.cl", renderer.getGLTextureReference());
+	scene.linkUpdateListener(&tracer);
 
 	setupCallbacks(window, &holder);
 

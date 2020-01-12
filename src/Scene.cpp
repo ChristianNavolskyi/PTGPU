@@ -25,6 +25,11 @@ void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rC
 	spheres.push_back(sphere);
 }
 
+Camera Scene::getRenderCamera()
+{
+	return camera.createRenderCamera();
+}
+
 void Scene::linkUpdateListener(RenderInfoListener *listener)
 {
 	changeListener = listener;
@@ -102,6 +107,8 @@ void Scene::move(SceneMovementDirections direction)
 		break;
 	}
 
+	std::cout << "moved" << std::endl;
+
 	notifyListenerCameraChanged();
 }
 
@@ -115,11 +122,6 @@ void Scene::updateMousePosition(float xPos, float yPos)
 	camera.handleMouseMovement(xPos, yPos);
 
 	notifyListenerCameraChanged();
-}
-
-Camera Scene::getRenderCamera()
-{
-	return camera.createRenderCamera();
 }
 
 void Scene::notifyListenerCameraChanged()

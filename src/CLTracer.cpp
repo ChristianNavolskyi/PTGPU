@@ -6,9 +6,10 @@
 #include <iostream>
 #include <chrono>
 
+#include <OpenCL/cl_gl.h>
+#include <OpenGL/CGLCurrent.h>
 #include <GL/glew.h>
 #include <OpenCL/opencl.h>
-#include <OpenGL/CGLCurrent.h>
 
 #include "CLUtil.h"
 #include "CLTracer.h"
@@ -89,7 +90,6 @@ void CLTracer::loadContext()
 
 	CGLContextObj cglCurrentContext = CGLGetCurrentContext();
 	CGLShareGroupObj cglShareGroup = CGLGetShareGroup(cglCurrentContext);
-
 	cl_context_properties props[] =
 			{
 					CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties) cglShareGroup,
@@ -217,6 +217,7 @@ void CLTracer::trace(float *imageData)
 {
 	glFinish();
 
+	size_t textureSize = sizeof(float) * 3 * width * height;
 	auto randomNumberSeed = (float) (rand() / (double) RAND_MAX);
 	size_t imageSize = sizeof(float) * 4 * width * height;
 
@@ -332,8 +333,10 @@ void CLTracer::updateCamera()
 
 	cl_int clError;
 
+	clFinish(commandQueue);
+
 	Camera renderCamera = scene.getRenderCamera();
-	clError |= clEnqueueWriteBuffer(commandQueue, camera, CL_FALSE, 0, sizeof(Camera), &renderCamera, 0, nullptr, nullptr);
+	clError |= clEnqueueWriteBuffer(commandQueue, camera, CL_TRUE, 0, sizeof(Camera), &renderCamera, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to load scene and/or camera to OpenCL");
 
 	clFinish(commandQueue);
