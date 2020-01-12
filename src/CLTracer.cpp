@@ -15,7 +15,7 @@
 
 void printImageData(cl_command_queue commandQueue, cl_mem image, int width, int height)
 {
-	size_t values = 3;
+	size_t values = 4;
 	float *imageData = (float *) malloc(sizeof(float) * values * width * height);
 
 	clFinish(commandQueue);
@@ -186,7 +186,7 @@ void CLTracer::clearImage(float *imageData)
 
 	cl_int clError;
 
-	size_t imageSize = sizeof(float) * 3 * width * height;
+	size_t imageSize = sizeof(float) * 4 * width * height;
 
 //	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
 //	V_RETURN_CL(clError, "Failed to acquire texture to clear image");
@@ -218,7 +218,7 @@ void CLTracer::trace(float *imageData)
 	glFinish();
 
 	auto randomNumberSeed = (float) (rand() / (double) RAND_MAX);
-	size_t imageSize = sizeof(float) * 3 * width * height;
+	size_t imageSize = sizeof(float) * 4 * width * height;
 
 	cl_int clError;
 
@@ -314,7 +314,7 @@ void CLTracer::updateRenderTarget()
 
 //	image = clCreateFromGLTexture(context, CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, textureTargetId, &clError);
 //	image = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, textureTargetId, &clError);
-	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * 3 * width * height, nullptr, &clError);
+	image = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_float4) * width * height, nullptr, &clError);
 	V_RETURN_CL(clError, "Failed to create link to shared resources");
 
 //	GLenum textureTarget;

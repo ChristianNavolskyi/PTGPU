@@ -33,8 +33,10 @@ Camera InteractiveCamera::createRenderCamera()
 	viewDirection = directionToCamera * -1.0f;
 	glm::vec3 eyePosition = centerPosition + directionToCamera * radius;
 
+	glm::vec3 view = normalize(glm::vec3(viewDirection.x, viewDirection.y, viewDirection.z));
+
 	camera.position = {{eyePosition.x, eyePosition.y, eyePosition.z}};
-	camera.view = {{viewDirection.x, viewDirection.y, viewDirection.z}};
+	camera.view = {{view.x, view.y, view.z}};
 	camera.up = {{0.f, 1.f, 0.f}};
 	camera.resolution = {{resolution.x, resolution.y}};
 	camera.fov = {{fov.x, fov.y}};
@@ -48,7 +50,8 @@ void InteractiveCamera::setResolution(int width, int height)
 	resolution.y = height;
 }
 
-glm::ivec2 InteractiveCamera::getResolution() {
+glm::ivec2 InteractiveCamera::getResolution()
+{
 	return resolution;
 }
 

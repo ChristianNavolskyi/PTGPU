@@ -10,8 +10,8 @@ typedef struct Sphere {
 	float dummy2;
 	float dummy3;
 	float3 position;
-	float3 color;
-	float3 emittance;
+	float4 color;
+	float4 emittance;
 } Sphere;
 
 typedef struct Intersection {
@@ -19,6 +19,7 @@ typedef struct Intersection {
     float3 normal;
     float t;
     Sphere *sphere;
+    int sphereId;
 } Intersection;
 
 typedef struct Camera
@@ -39,12 +40,13 @@ typedef struct Camera
 #endif
 
 #define EPSILON 0.00001f
+#define PI 3.14159265358979323846
 
 static float noise3D(float x, float y, float z);
 float3 sampleCosHemisphere(float exp, float rand1, float rand2);
 float3 transformIntoWorldSpace(float3 normal, float3 direction);
 void setPixelColor3f(__global float* image, int position, float3 color);
-Ray getCameraRay(int x, int y, int width, int height);
+Ray getCameraRay(__constant Camera *camera, int x, int y);
 bool intersectSphere(Sphere *sphere, Ray *ray, float *t1, float *t2);
 bool findIntersection(Ray *cameraRay, Intersection *intersection, __constant Sphere *spheres, int sphereCount);
 
@@ -74,30 +76,34 @@ void setPixelColor3f(__global float* image, int position, float3 color) {
     image[position + 2] = color.b;
 }
 
-Ray getCameraRay(int x, int y, int width, int height) {
-    float3 camOrigin = (float3) (0.f, 0.f, 0.f);
-    float3 up = (float3) (0.f, 1.f, 0.f);
-    float3 viewDirection = (float3) (0.f, 0.f, -1.f);
+Ray getCameraRay(__constant Camera *camera, int x, int y) {
+    float3 camOrigin = camera->position;
+    float3 up = camera->up;
+    float3 viewDirection = camera->view;
+    int2 resolution = camera->resolution;
 
     float3 wVector = normalize(-viewDirection);
     float3 uVector = normalize(cross(up, wVector));
     float3 vVector = normalize(cross(wVector, uVector));
 
-    float l = -1.f;
-    float r = 2.f;
-    float t = 1.f;
-    float b = -t;
+    float horizontalFactor = tan(camera->fov.x * 0.5f * (PI / 180));
+    float verticalFactor = tan(camera->fov.y * -0.5f * (PI / 180));
 
-    // TODO replace .5f with random number in [0, 1) for AA
-    float u = l + (r - l) * (x + 0.5f) / (float) width;
-    float v = t + (b - t) * (y + 0.5f) / (float) height;
+    float3 middle = camOrigin + viewDirection;
+    float3 horizontal = uVector * horizontalFactor;
+    float3 vertical = vVector * verticalFactor;
 
-    float d = CAMERA_DISTANCE;
-    float3 s = u * uVector + v * vVector - d * wVector;
+    int xPixel = x;
+    int yPixel = resolution.y - y - 1;
+
+    float sx = (float) xPixel / ((float) resolution.x - 1.f);
+    float sy = (float) yPixel / ((float) resolution.y - 1.f);
+
+    float3 pointOnImagePlane = middle + horizontal * (2.f * sx - 1.f) + vertical * (2.f * sy - 1.f);
 
     Ray ray;
     ray.origin = camOrigin;
-    ray.direction = normalize(s);
+    ray.direction = normalize(pointOnImagePlane - camOrigin);
 
     return ray;
 }
@@ -148,6 +154,7 @@ bool findIntersection(Ray *cameraRay, Intersection *intersection, __constant Sph
                 intersection->t = t2;
             }
             intersection->sphere = &sphere;
+            intersection->sphereId = i;
         }
     }
 
@@ -161,30 +168,34 @@ bool findIntersection(Ray *cameraRay, Intersection *intersection, __constant Sph
     return false;
 }
 
-__kernel void render(__global float *image, __constant Sphere *spheres, const int sphereCount, __constant Camera *camera, const int iteration, const float seed) {
+__kernel void render(__global float4 *image, __constant Sphere *spheres, const int sphereCount, __constant Camera *camera, const int iteration, const float seed) {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
     int width = camera->resolution.x;
     int height = camera->resolution.y;
 
-    int pixelPosition = gy * width * 3 + gx * 3;
+    int pixelPosition = gy * width + gx;
 
-    Ray ray = getCameraRay(gx, gy, width, height);
+    Ray ray = getCameraRay(camera, gx, gy);
 
-    float3 accumulatedColor = (float3) (0.f, 0.f, 0.f);
-    float3 mask = (float3) (1.f, 1.f, 1.f);
+    float4 accumulatedColor = (float4) (0.f, 0.f, 0.f, 0.f);
+    float4 mask = (float4) (1.f, 1.f, 1.f, 1.f);
 
-    float randomValue = random(seed, (float) gx, (float) gy);
-    float orandomValue = random((float) gx, seed, (float) gy);
-    float3 color = (float3) (randomValue, orandomValue, randomValue);
-    setPixelColor3f(image, pixelPosition, color);
-    return;
+//    float randomValue = random(seed, (float) gx, (float) gy);
+//    float orandomValue = random((float) gx, seed, (float) gy);
+//    float4 color = (float4) ((ray.direction + (float3) (1.f, 1.f, 0.f))/2.f, 1.f);
+//
+//    if (gx < width && gy < height) {
+//        image[pixelPosition] = color;
+//    }
+//
+//    return;
 
     for (int i = 0; i < N_BOUNCES; i++) {
         Intersection intersection;
 
         if (findIntersection(&ray, &intersection, spheres, sphereCount)) {
-            accumulatedColor += mask * (float3) (0.7f, 0.3f, 0.7f);
+            accumulatedColor += mask * (float4) (1.f, 0.0f, 0.0f, 1.f);
             break;
 
             float rand1 = random((float) gx, (float) gy, (float) iteration);
@@ -208,26 +219,27 @@ __kernel void render(__global float *image, __constant Sphere *spheres, const in
 
             mask *= dot(ray.direction, intersection.normal);
         } else {
-            accumulatedColor += mask * (float3) (0.3f, 0.3f, 0.7f);
+            accumulatedColor += mask * (float4) (0.3f, 0.3f, 0.7f, 1.f);
             break;
         }
     }
 
     if (gx < width && gy < height) {
-        setPixelColor3f(image, pixelPosition, accumulatedColor);
+        image[pixelPosition] = accumulatedColor;
     }
 }
 
-__kernel void clearImage(__global float* image, const int width, const int height) {
+__kernel void clearImage(__global float4 *image, const int width, const int height) {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
 
-    int position = gy * width * 3 + gx * 3;
+    int position = gy * width + gx;
 
-    float3 clearColor = (float3) (gx / (float) width, gy / (float) height, 1.f);
+    float4 clearColor = (float4) (gx / (float) width, gy / (float) height, 0.f, 1.f);
 //    float3 clearColor = (float3) (0.f, 1.f, 0.f);
 
     if (gx < width && gy < height) {
-        setPixelColor3f(image, position, clearColor);
+        image[position] = clearColor;
+//        setPixelColor3f(image, position, clearColor);
     }
 }

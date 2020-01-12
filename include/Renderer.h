@@ -24,11 +24,11 @@ private:
 
 	GLfloat textureCoords[8];
 
-	GLfloat texturePixels[12] = {
-			1.f, 0.f, 0.f, // tl
-			0.f, 1.f, 0.f, // tr
-			0.f, 0.f, 1.f, // bl
-			1.f, 1.f, 1.f, // br
+	GLfloat texturePixels[16] = {
+			1.f, 0.f, 0.f, 1.f, // tl
+			0.f, 1.f, 0.f, 1.f, // tr
+			0.f, 0.f, 1.f, 1.f, // bl
+			1.f, 1.f, 1.f, 1.f, // br
 	};
 
 public:

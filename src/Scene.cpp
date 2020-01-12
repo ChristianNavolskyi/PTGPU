@@ -101,6 +101,8 @@ void Scene::move(SceneMovementDirections direction)
 		camera.changePitch(-delta);
 		break;
 	}
+
+	notifyListenerCameraChanged();
 }
 
 void Scene::initialMousePosition(float xPos, float yPos)
@@ -111,10 +113,19 @@ void Scene::initialMousePosition(float xPos, float yPos)
 void Scene::updateMousePosition(float xPos, float yPos)
 {
 	camera.handleMouseMovement(xPos, yPos);
-	// TODO reset state
+
+	notifyListenerCameraChanged();
 }
 
 Camera Scene::getRenderCamera()
 {
 	return camera.createRenderCamera();
+}
+
+void Scene::notifyListenerCameraChanged()
+{
+	if (changeListener)
+	{
+		changeListener->notify();
+	}
 }
