@@ -180,9 +180,9 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
             float3 u = normalize((float3) (0.f, -w.z, w.y));
             float3 v = normalize(cross(w, u));
 
-            float3 newdir = normalize(u * cos(rand1) * rand2s + v * sin(rand1) * rand2s + w * sqrt(1.0f - rand2));
+            float3 directionInHemisphere = sampleCosHemisphere(0.f, rand1, rand2);
 
-//            float3 sampleOnHemisphere = transformIntoWorldSpace(intersection.normal, sampleCosHemisphere(0.f, rand1, rand2));
+            float3 newdir = normalize(u * directionInHemisphere.x + v * directionInHemisphere.y + w * directionInHemisphere.z);
 
             ray.origin = intersection.position + intersection.normal * EPSILON;
             ray.direction = newdir;
@@ -199,7 +199,7 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
     }
 
     if (gx < width && gy < height) {
-        image[position] = accumulatedColor;
+        image[position] = (image[position] * iteration + accumulatedColor) / (iteration + 1.f);
     }
 }
 
