@@ -5,9 +5,9 @@
 #include "InteractiveCamera.h"
 #include <algorithm>
 
-InteractiveCamera::InteractiveCamera(int width, int height) : centerPosition(0.f, 0.f, 0.f),
-															  yaw(0.f),
-															  pitch(0.3f),
+InteractiveCamera::InteractiveCamera(int width, int height) : centerPosition(-0.289f, 0.3577f, -0.023f),
+															  yaw(-2.747f),
+															  pitch(-0.292f),
 															  radius(4.f),
 															  resolution(width, height),
 															  fov(40.f, 40.f),
@@ -73,7 +73,7 @@ void InteractiveCamera::handleMouseMovement(float xPos, float yPos)
 	lastXPos = xPos;
 	lastYPos = yPos;
 
-	changeYaw(xDelta * 0.01f);
+	changeYaw(xDelta * -0.01f);
 	changePitch(yDelta * 0.01f);
 }
 

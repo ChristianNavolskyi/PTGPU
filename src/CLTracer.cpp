@@ -14,13 +14,17 @@
 #include "CLUtil.h"
 #include "CLTracer.h"
 
+long getCurrentTime()
+{
+	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
 
 CLTracer::CLTracer(Scene *scene, const size_t localWorkSize[2]) : scene(scene)
 {
 	this->localWorkSize[0] = localWorkSize[0];
 	this->localWorkSize[1] = localWorkSize[1];
 
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	auto time = getCurrentTime();
 
 	srand48(time);
 	scene->linkUpdateListener(this);
@@ -52,6 +56,8 @@ bool CLTracer::init(const char *programPath, GLuint textureBufferId)
 	V_RETURN_FALSE_CL(clError, "Failed to allocate space for camera");
 
 	updateScene();
+
+	renderStartTime = getCurrentTime();
 
 	return true;
 }
@@ -154,6 +160,10 @@ void CLTracer::loadKernel(cl_kernel *kernel, const char *kernelName)
 
 void CLTracer::trace()
 {
+	if (iteration >= maxSamples) {
+		return;
+	}
+
 	glFinish();
 
 	auto randomNumberSeed = (float) (rand() / (double) RAND_MAX);
@@ -169,6 +179,7 @@ void CLTracer::trace()
 	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &camera);
 	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
 	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_float), (void *) &randomNumberSeed);
+	clError |= clSetKernelArg(renderKernel, 6, sizeof(cl_int), (void *) &option);
 	V_RETURN_CL(clError, "Failed to set trace kernel arguments");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, renderKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
@@ -214,6 +225,7 @@ void CLTracer::changeScene(Scene *scene)
 void CLTracer::resetRendering()
 {
 	iteration = 0;
+	renderStartTime = getCurrentTime();
 }
 
 void CLTracer::notify()
@@ -258,4 +270,18 @@ void CLTracer::updateCamera()
 	V_RETURN_CL(clError, "Failed to load scene and/or camera to OpenCL");
 
 	clFinish(commandQueue);
+}
+
+float CLTracer::getFPS()
+{
+	long  currentTime = getCurrentTime();
+	float timeDiff = currentTime - renderStartTime;
+
+	return iteration * 1000.f / timeDiff;
+}
+
+void CLTracer::setRenderOption(RenderOption renderOption)
+{
+	option = renderOption;
+	resetRendering();
 }

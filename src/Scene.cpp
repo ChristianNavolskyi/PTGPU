@@ -15,13 +15,15 @@ Scene::~Scene()
 	spheres.clear();
 }
 
-void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance, float gEmittance, float bEmittance)
+void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance, float gEmittance, float bEmittance,
+					  SurfaceCharacteristic surfaceCharacteristic)
 {
 	Sphere sphere{};
 	sphere.radius = radius;
 	sphere.position = {{xPos, yPos, zPos}};
 	sphere.color = {{rColor, gColor, bColor, 1.f}};
 	sphere.emittance = {{rEmittance, gEmittance, bEmittance, 1.f}};
+	sphere.surfaceCharacteristic = surfaceCharacteristic;
 
 	spheres.push_back(sphere);
 }
@@ -83,16 +85,16 @@ void Scene::move(SceneMovementDirections direction)
 		camera.goForward(-delta);
 		break;
 	case UP:
-		camera.changeAltitude(delta);
-		break;
-	case DOWN:
 		camera.changeAltitude(-delta);
 		break;
+	case DOWN:
+		camera.changeAltitude(delta);
+		break;
 	case RIGHT:
-		camera.strafe(delta);
+		camera.strafe(-delta);
 		break;
 	case LEFT:
-		camera.strafe(-delta);
+		camera.strafe(delta);
 		break;
 	case YAW_RIGHT:
 		camera.changeYaw(delta);

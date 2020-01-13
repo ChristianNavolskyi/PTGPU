@@ -36,14 +36,50 @@ void showImGuiToolTip(ReferenceHolder *holder)
 
 	glm::vec3 position = holder->scene->camera.centerPosition;
 	glm::ivec2 resolution = holder->scene->camera.resolution;
+	glm::vec3 view = holder->scene->camera.viewDirection;
+
+	float fps = holder->tracer->getFPS();
 
 	ImGui::Begin("Scene info");
 
 	ImGui::Text("Camera Position: (%f, %f, %f)", position.x, position.y, position.z);
 	ImGui::Text("Camera Yaw: %f", holder->scene->camera.yaw);
 	ImGui::Text("Camera Pitch: %f", holder->scene->camera.pitch);
+	ImGui::Text("Camera View Direction: (%f, %f, %f)", view.x, view.y, view.z);
 	ImGui::Text("Camera Resolution: (%d, %d)", resolution.x, resolution.y);
+
 	ImGui::Text("Iteration: %d", holder->tracer->iteration);
+	ImGui::SliderInt("Max Samples", &holder->tracer->maxSamples, 1, 10000);
+
+	ImGui::Text("FPS: %f", fps);
+
+	ImGui::Separator();
+	ImGui::Text("Render Options");
+
+	if (ImGui::Button("Default"))
+	{
+		holder->tracer->setRenderOption(DEFAULT);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Normal"))
+	{
+		holder->tracer->setRenderOption(NORMAL);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Depth"))
+	{
+		holder->tracer->setRenderOption(DEPTH);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Color"))
+	{
+		holder->tracer->setRenderOption(COLOR);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Emittance"))
+	{
+		holder->tracer->setRenderOption(EMITTANCE);
+	}
 
 	ImGui::End();
 
@@ -109,10 +145,13 @@ int main(int, char **)
 	size_t localWorkSize[] = {16, 16};
 
 	Scene scene(width, height);
-	scene.addSphere(0.f, -200.4f, 0.f, 200.f, 0.9f, 0.3f, 0.f, 0.f, 0.f, 0.f); // floor
-	scene.addSphere(-0.25f, -0.24f, -0.1f, 0.16f, 0.8f, 0.7f, 0.6f, 0.f, 0.f, 0.f); // left
-	scene.addSphere(0.25f, -0.24f, 0.1f, 0.16f, 0.8f, 0.7f, 0.6f, 0.f, 0.f, 0.f); // right
-	scene.addSphere(0.f, 1.36f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.9f, 0.8f, 0.6f); // light
+//	scene.addSphere(-201.f, 0.f, 0.f, 200.f, 0.9f, 0.f, 0.5f, 0.f, 0.f, 0.f, DIFFUSE); // left wall
+//	scene.addSphere(201.f, 0.f, 0.f, 200.f, 0.f, 0.8f, 0.5f, 0.f, 0.f, 0.f, DIFFUSE); // right wall
+//	scene.addSphere(0.f, 0.f, -201.f, 200.f, 0.f, 0.8f, 0.5f, 0.f, 0.f, 0.f, DIFFUSE); // front wall
+//	scene.addSphere(0.f, -200.4f, 0.f, 200.f, 0.9f, 0.3f, 0.f, 0.f, 0.f, 0.f, DIFFUSE); // floor
+	scene.addSphere(-0.25f, -0.24f, -0.1f, 0.16f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, SPECULAR); // left
+	scene.addSphere(0.25f, -0.24f, 0.1f, 0.16f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, DIFFUSE); // right
+	scene.addSphere(0.f, 1.36f, -0.2f, 1.f, 0.f, 0.f, 0.f, 0.9f, 0.8f, 0.6f, DIFFUSE); // light
 //	scene.addSphere(1.f, 1.f, -20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
 
 	Renderer renderer(width, height);
@@ -233,6 +272,9 @@ void setupCallbacks(GLFWwindow *window, ReferenceHolder *holder)
 				break;
 			case GLFW_KEY_DOWN:
 				scene->move(PITCH_DOWN);
+				break;
+			case GLFW_KEY_SPACE:
+				holder->tracer->resetRendering();
 				break;
 			default:
 				break;

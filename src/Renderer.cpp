@@ -139,14 +139,14 @@ void Renderer::init(const char *vertexShaderPath, const char *fragmentShaderPath
 
 void Renderer::updateTextureCoords()
 {
-	textureCoords[0] = 0.f;
-	textureCoords[1] = 0.f;
+	textureCoords[0] = (float) -width;
+	textureCoords[1] = (float) -height;
 
-	textureCoords[2] = 0.f;
+	textureCoords[2] = (float) -width;
 	textureCoords[3] = (float) height - 1.f;
 
 	textureCoords[4] = (float) width - 1.f;
-	textureCoords[5] = 0.f;
+	textureCoords[5] = (float) -height;
 
 	textureCoords[6] = (float) width - 1.f;
 	textureCoords[7] = (float) height - 1.f;

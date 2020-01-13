@@ -9,6 +9,15 @@
 #include "InteractiveCamera.h"
 #include "RenderInfoListener.h"
 
+enum RenderOption
+{
+	DEFAULT = 0,
+	NORMAL = 1,
+	DEPTH = 2,
+	COLOR = 3,
+	EMITTANCE = 4,
+};
+
 /**
  * This class contains all the OpenCL context information, starts the path tracing execution and returns the result
  */
@@ -32,6 +41,10 @@ private:
 	size_t localWorkSize[2] = {0, 0};
 	size_t globalWorkSize[2] = {0, 0};
 	Scene *scene;
+
+	RenderOption option = NORMAL;
+
+	long renderStartTime = -1;
 
 	int width = 0, height = 0;
 
@@ -70,5 +83,10 @@ public:
 
 	void updateCamera();
 
+	float getFPS();
+
+	void setRenderOption(RenderOption renderOption);
+
 	cl_int iteration = 0;
+	int maxSamples = 1000;
 };
