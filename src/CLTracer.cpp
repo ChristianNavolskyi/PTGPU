@@ -29,7 +29,6 @@ CLTracer::CLTracer(Scene *scene, const size_t localWorkSize[2]) : scene(scene)
 CLTracer::~CLTracer()
 {
 	clReleaseKernel(renderKernel);
-	clReleaseKernel(clearKernel);
 	clReleaseProgram(program);
 	clReleaseCommandQueue(commandQueue);
 	clReleaseContext(context);
@@ -44,7 +43,6 @@ bool CLTracer::init(const char *programPath, GLuint textureBufferId)
 
 	loadProgram(programPath);
 	loadKernel(&renderKernel, "render");
-	loadKernel(&clearKernel, "clearImage");
 
 	this->textureTargetId = textureBufferId;
 
@@ -154,29 +152,6 @@ void CLTracer::loadKernel(cl_kernel *kernel, const char *kernelName)
 	V_RETURN_CL(clError, errorMessage);
 }
 
-void CLTracer::clearImage()
-{
-	glFinish();
-
-	cl_int clError;
-
-	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to acquire texture to clear image");
-
-	clError = clSetKernelArg(clearKernel, 0, sizeof(cl_mem), (void *) &image);
-	clError |= clSetKernelArg(clearKernel, 1, sizeof(cl_int), &width);
-	clError |= clSetKernelArg(clearKernel, 2, sizeof(cl_int), &height);
-	V_RETURN_CL(clError, "Failed to set args to clear kernels");
-
-	clError = clEnqueueNDRangeKernel(commandQueue, clearKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to execute clear kernel");
-
-	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to release texture after clearing image");
-
-	clFinish(commandQueue);
-}
-
 void CLTracer::trace()
 {
 	glFinish();
@@ -238,8 +213,6 @@ void CLTracer::changeScene(Scene *scene)
 
 void CLTracer::resetRendering()
 {
-	clearImage();
-
 	iteration = 0;
 }
 
@@ -256,6 +229,7 @@ void CLTracer::notifySizeChanged(int newWidth, int newHeight)
 
 	setGlobalWorkSize();
 	updateRenderTarget();
+	updateCamera();
 	resetRendering();
 }
 

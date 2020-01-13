@@ -202,19 +202,3 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
         image[position] = (image[position] * iteration + accumulatedColor) / (iteration + 1.f);
     }
 }
-
-__kernel void clearImage(__global float4* image, const int width, const int height) {
-    int gx = get_global_id(0);
-    int gy = get_global_id(1);
-
-    int position = gy * width + gx;
-
-    float4 clearColor = (float4) (gx / (float) width, gy / (float) height, 0.f, 1.f);
-//    float3 clearColor = (float3) (0.f, 1.f, 0.f);
-
-    if (gx < width && gy < height) {
-        image[position] = clearColor;
-//        write_imagef(image, (int2) (gx, gy), clearColor);
-//        setPixelColor3f(image, position, clearColor);
-    }
-}

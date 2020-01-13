@@ -20,7 +20,6 @@ private:
 	cl_command_queue commandQueue = nullptr;
 
 	cl_kernel renderKernel = nullptr;
-	cl_kernel clearKernel = nullptr;
 	cl_program program = nullptr;
 
 	cl_mem image = nullptr;
@@ -60,8 +59,6 @@ public:
 	bool init(const char *programPath, GLuint textureBufferId);
 
 	void changeScene(Scene *scene);
-
-	void clearImage();
 
 	void trace();
 

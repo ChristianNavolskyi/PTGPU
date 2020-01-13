@@ -12,24 +12,23 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 
-struct GLFWReferenceHolder
+struct ReferenceHolder
 {
 	Renderer *renderer;
 	CLTracer *tracer;
 	Scene *scene;
-	float *imageData;
 	bool mousePressed;
 	bool showToolTip;
 };
 
-void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder);
+void setupCallbacks(GLFWwindow *window, ReferenceHolder *holder);
 
 static void printError(const char *description)
 {
 	std::cerr << description << std::endl;
 }
 
-void showImGuiToolTip(GLFWReferenceHolder *holder)
+void showImGuiToolTip(ReferenceHolder *holder)
 {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -107,9 +106,7 @@ int main(int, char **)
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
 
-
 	size_t localWorkSize[] = {16, 16};
-	float *imageData = (float *) malloc(sizeof(float) * 4 * width * height);
 
 	Scene scene(width, height);
 	scene.addSphere(0.f, -200.4f, 0.f, 200.f, 0.9f, 0.3f, 0.f, 0.f, 0.f, 0.f); // floor
@@ -126,20 +123,17 @@ int main(int, char **)
 	CLTracer tracer(&scene, localWorkSize);
 	tracer.init("../src/kernels/pathtracer.cl", renderer.getGLTextureReference());
 
-	GLFWReferenceHolder holder{};
+	ReferenceHolder holder{};
 	holder.renderer = &renderer;
 	holder.tracer = &tracer;
 	holder.scene = &scene;
-	holder.imageData = imageData;
 	holder.mousePressed = false;
 	holder.showToolTip = true;
 
-	tracer.clearImage();
 	setupCallbacks(window, &holder);
 
 	do
 	{
-		tracer.updateCamera();
 		tracer.trace();
 		renderer.render();
 
@@ -156,17 +150,12 @@ int main(int, char **)
 	return 0;
 }
 
-void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
+void setupCallbacks(GLFWwindow *window, ReferenceHolder *holder)
 {
-	glfwSetWindowUserPointer(window, holder);
 	auto frameSizeCallback = [](GLFWwindow *window, int width, int height)
 	{
-		auto holder = (GLFWReferenceHolder *)
+		auto holder = (ReferenceHolder *)
 				glfwGetWindowUserPointer(window);
-
-		free(holder->imageData);
-
-		holder->imageData = (float *) malloc(sizeof(float) * 4 * width * height);
 
 		holder->renderer->setRenderSize(width, height);
 		holder->scene->changeResolution(width, height);
@@ -176,7 +165,7 @@ void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
 	{
 		if (button == GLFW_MOUSE_BUTTON_LEFT)
 		{
-			auto holder = (GLFWReferenceHolder *) glfwGetWindowUserPointer(window);
+			auto holder = (ReferenceHolder *) glfwGetWindowUserPointer(window);
 
 			if (action == GLFW_PRESS)
 			{
@@ -195,7 +184,7 @@ void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
 
 	auto mouseMovementCallback = [](GLFWwindow *window, double xPos, double yPos)
 	{
-		auto holder = (GLFWReferenceHolder *) glfwGetWindowUserPointer(window);
+		auto holder = (ReferenceHolder *) glfwGetWindowUserPointer(window);
 
 		if (holder->mousePressed)
 		{
@@ -207,7 +196,7 @@ void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
 	{
 		if (action == GLFW_PRESS || action == GLFW_REPEAT)
 		{
-			auto holder = ((GLFWReferenceHolder *) glfwGetWindowUserPointer(window));
+			auto holder = ((ReferenceHolder *) glfwGetWindowUserPointer(window));
 			auto scene = holder->scene;
 
 			switch (key)
@@ -250,6 +239,8 @@ void setupCallbacks(GLFWwindow *window, GLFWReferenceHolder *holder)
 			}
 		}
 	};
+
+	glfwSetWindowUserPointer(window, holder);
 
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetCursorPosCallback(window, mouseMovementCallback);
