@@ -16,6 +16,8 @@ enum RenderOption
 	DEPTH = 2,
 	COLOR = 3,
 	EMITTANCE = 4,
+	SPHERE_ID = 5,
+	RANDOM = 6
 };
 
 /**
@@ -42,7 +44,7 @@ private:
 	size_t globalWorkSize[2] = {0, 0};
 	Scene *scene;
 
-	RenderOption option = NORMAL;
+	RenderOption option = DEFAULT;
 
 	long renderStartTime = -1;
 

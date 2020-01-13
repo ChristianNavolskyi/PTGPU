@@ -17,7 +17,7 @@ typedef struct Sphere
 	cl_float dummy1;
 	cl_float dummy2;
 	cl_float3 position;
-	cl_float4 color;
+	cl_float3 color;
 	cl_float4 emittance;
 	cl_int surfaceCharacteristic;
 } Sphere;

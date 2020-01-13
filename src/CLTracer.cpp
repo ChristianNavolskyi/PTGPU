@@ -160,8 +160,14 @@ void CLTracer::loadKernel(cl_kernel *kernel, const char *kernelName)
 
 void CLTracer::trace()
 {
-	if (iteration >= maxSamples) {
+	if (iteration >= maxSamples)
+	{
 		return;
+	}
+
+	if (option == RANDOM)
+	{
+		iteration = 0;
 	}
 
 	glFinish();
@@ -274,7 +280,7 @@ void CLTracer::updateCamera()
 
 float CLTracer::getFPS()
 {
-	long  currentTime = getCurrentTime();
+	long currentTime = getCurrentTime();
 	float timeDiff = currentTime - renderStartTime;
 
 	return iteration * 1000.f / timeDiff;

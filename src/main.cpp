@@ -80,6 +80,16 @@ void showImGuiToolTip(ReferenceHolder *holder)
 	{
 		holder->tracer->setRenderOption(EMITTANCE);
 	}
+	ImGui::SameLine();
+	if (ImGui::Button("Sphere Id"))
+	{
+		holder->tracer->setRenderOption(SPHERE_ID);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Random Numbers"))
+	{
+		holder->tracer->setRenderOption(RANDOM);
+	}
 
 	ImGui::End();
 
@@ -149,9 +159,9 @@ int main(int, char **)
 //	scene.addSphere(201.f, 0.f, 0.f, 200.f, 0.f, 0.8f, 0.5f, 0.f, 0.f, 0.f, DIFFUSE); // right wall
 //	scene.addSphere(0.f, 0.f, -201.f, 200.f, 0.f, 0.8f, 0.5f, 0.f, 0.f, 0.f, DIFFUSE); // front wall
 //	scene.addSphere(0.f, -200.4f, 0.f, 200.f, 0.9f, 0.3f, 0.f, 0.f, 0.f, 0.f, DIFFUSE); // floor
-	scene.addSphere(-0.25f, -0.24f, -0.1f, 0.16f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.f, SPECULAR); // left
-	scene.addSphere(0.25f, -0.24f, 0.1f, 0.16f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, DIFFUSE); // right
-	scene.addSphere(0.f, 1.36f, -0.2f, 1.f, 0.f, 0.f, 0.f, 0.9f, 0.8f, 0.6f, DIFFUSE); // light
+	scene.addSphere(0.f, 0.f, 0.f, 0.16f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, SPECULAR); // left
+//	scene.addSphere(0.25f, -0.24f, 0.1f, 0.16f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, DIFFUSE); // right
+	scene.addSphere(0.f, 1.36f, -0.2f, 1.f, 0.f, 0.f, 0.f, 0.9f, 0.9f, 0.85f, SPECULAR); // light
 //	scene.addSphere(1.f, 1.f, -20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
 
 	Renderer renderer(width, height);
