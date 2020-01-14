@@ -28,6 +28,7 @@ typedef struct
 	int sphereCount;
 	int lightSphereCount;
 	int totalRadiance;
+	float3 backgroundColor;
 } SceneInfo;
 
 typedef struct
@@ -49,7 +50,7 @@ typedef struct
 } Camera;
 
 #ifndef N_BOUNCES
-#define N_BOUNCES 8
+#define N_BOUNCES 5
 #endif
 
 #define DIFFUSE (1 << 0)
@@ -327,10 +328,6 @@ bool findIntersection(Ray *ray, Intersection *intersection, __constant Sphere *s
     {
         intersection->position = ray->origin + intersection->t * ray->direction;
         intersection->normal = normalize(intersection->position - intersection->sphere->position);
-        //        float3 normal = normalize(intersection->position - intersection->sphere->position);
-        //        float3 normal_facing = dot(normal, ray->direction) < 0.0f ? normal : normal * (-1.0f);
-        //
-        //        intersection->normal = normal_facing;
 
         return true;
     }
@@ -362,6 +359,12 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
             float rand1 = random(gx / (float)width, (gy + iteration) / (float)height, seed);
             float rand2 = random(gx / (float)width, gy / (float)height, seed + iteration);
 
+//            float3 up = (float3) (0.f, 1.f, 0.f);
+//
+//            L.xyz = sampleCosHemisphere(100.f, rand0, rand1);
+//            break;
+
+
             if (options != DEFAULT)
             {
                 L = showDebugVision(&intersection, options, rand0, rand1, rand2);
@@ -382,8 +385,8 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
             float3 selectedSphereCharacteristic = intersection.sphere->surfaceCharacteristic;
 
             if (rand3 < selectedSphereCharacteristic.x) { // diffuse reflection
-                float rand4 = random((gx + iteration) / (float) width, gy / (float) height, seed + iteration);
-                float rand5 = random(gx / (float) width, (gy + iteration) / (float) height, seed + iteration);
+                float rand4 = random((gx + seed) / (float) width, (gy + iteration) / (float) height, seed);
+                float rand5 = random((gx + iteration) / (float) width, (gy + seed) / (float) height, seed);
                 float3 directionInHemisphere = sampleCosHemisphere(0.f, rand4, rand5);
                 float directionPDF = sampleCosHemispherePDF(0.f, directionInHemisphere.z); // TODO check where to divide
 
@@ -403,7 +406,7 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
         else
         {
 //                        L += (float4)((ray.direction + 1.f) / 2.f, 1.f);
-            L += (float4)(0.7f) * brdfCosFactor;
+            L += (float4)(sceneInfo->backgroundColor, 1.f) * brdfCosFactor;
             break;
         }
     }

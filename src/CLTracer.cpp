@@ -209,7 +209,12 @@ void CLTracer::updateScene()
 	SAFE_RELEASE_MEMOBJECT(lightSpheres);
 
 	spheres = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, scene->getSphereSize(), scene->getSphereData(), &clError);
-	lightSpheres = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, scene->getLightSphereSize(), scene->getLightSphereData(), &clError);
+	lightSpheres = clCreateBuffer(context, CL_MEM_READ_ONLY, scene->getLightSphereSize(), nullptr, &clError);
+	auto lightData = scene->getLightSphereData();
+	if (lightData)
+	{
+		clError |= clEnqueueWriteBuffer(commandQueue, lightSpheres, CL_FALSE, 0, scene->getLightSphereSize(), lightData, 0, nullptr, nullptr);
+	}
 	clError |= clEnqueueWriteBuffer(commandQueue, sceneInfo, CL_FALSE, 0, sizeof(SceneInfo), scene->getSceneInfo(), 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to initialize buffers for scene info");
 

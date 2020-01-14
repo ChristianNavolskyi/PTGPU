@@ -5,18 +5,22 @@
 #include "Scene.h"
 #include "CLUtil.h"
 
-Scene::Scene(int width, int height) : spheres(), camera(width, height)
+Scene::Scene() : spheres(), sceneInfo()
 {
-	camera = InteractiveCamera(width, height);
-
 	sceneInfo.sphereCount = 0;
 	sceneInfo.lightSphereCount = 0;
 	sceneInfo.totalRadiance = 0.f;
+	sceneInfo.backgroundColor = {{0.7f, 0.7f, 0.7f}};
 }
 
 Scene::~Scene()
 {
 	spheres.clear();
+}
+
+void Scene::setCamera(InteractiveCamera *camera)
+{
+	this->camera = camera;
 }
 
 void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance, float gEmittance, float bEmittance, float diffuse, float specular,
@@ -54,9 +58,14 @@ void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rC
 	spheres.push_back(sphere);
 }
 
+void Scene::setBackgroundColor(float r, float g, float b)
+{
+	sceneInfo.backgroundColor = {{r, g, b}};
+}
+
 Camera Scene::getRenderCamera()
 {
-	return camera.createRenderCamera();
+	return camera->createRenderCamera();
 }
 
 void Scene::linkUpdateListener(RenderInfoListener *listener)
@@ -76,12 +85,7 @@ size_t Scene::getSphereSize()
 
 LightSphere *Scene::getLightSphereData()
 {
-	if (!lightSpheres.empty())
-	{
-		return &lightSpheres[0];
-	}
-
-	return nullptr;
+	return &lightSpheres[0];
 }
 
 size_t Scene::getLightSphereSize()
@@ -96,13 +100,13 @@ SceneInfo *Scene::getSceneInfo()
 
 void Scene::changeResolution(int width, int height)
 {
-	camera.setResolution(width, height);
+	camera->setResolution(width, height);
 	notifyListenerResolutionChanged(width, height);
 }
 
 glm::ivec2 Scene::getResolution()
 {
-	return camera.getResolution();
+	return camera->getResolution();
 }
 
 void Scene::notifyListenerResolutionChanged(int width, int height)
@@ -120,34 +124,34 @@ void Scene::move(SceneMovementDirections direction)
 	switch (direction)
 	{
 	case FORWARD:
-		camera.goForward(delta);
+		camera->goForward(delta);
 		break;
 	case BACKWARD:
-		camera.goForward(-delta);
+		camera->goForward(-delta);
 		break;
 	case UP:
-		camera.changeAltitude(-delta);
+		camera->changeAltitude(delta);
 		break;
 	case DOWN:
-		camera.changeAltitude(delta);
+		camera->changeAltitude(-delta);
 		break;
 	case RIGHT:
-		camera.strafe(-delta);
+		camera->strafe(-delta);
 		break;
 	case LEFT:
-		camera.strafe(delta);
+		camera->strafe(delta);
 		break;
 	case YAW_RIGHT:
-		camera.changeYaw(delta);
+		camera->changeYaw(delta);
 		break;
 	case YAW_LEFT:
-		camera.changeYaw(-delta);
+		camera->changeYaw(-delta);
 		break;
 	case PITCH_UP:
-		camera.changePitch(delta);
+		camera->changePitch(-delta);
 		break;
 	case PITCH_DOWN:
-		camera.changePitch(-delta);
+		camera->changePitch(delta);
 		break;
 	}
 
@@ -156,12 +160,12 @@ void Scene::move(SceneMovementDirections direction)
 
 void Scene::initialMousePosition(float xPos, float yPos)
 {
-	camera.setInitialMousePosition(xPos, yPos);
+	camera->setInitialMousePosition(xPos, yPos);
 }
 
 void Scene::updateMousePosition(float xPos, float yPos)
 {
-	camera.handleMouseMovement(xPos, yPos);
+	camera->handleMouseMovement(xPos, yPos);
 
 	notifyListenerCameraChanged();
 }

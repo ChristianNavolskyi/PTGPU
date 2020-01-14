@@ -33,6 +33,7 @@ typedef struct SceneInfo
 	cl_int sphereCount;
 	cl_int lightSphereCount;
 	cl_int totalRadiance;
+	cl_float3 backgroundColor;
 } SceneInfo;
 
 enum SceneMovementDirections
@@ -49,19 +50,25 @@ private:
 
 	RenderInfoListener *changeListener = nullptr;
 
+	InteractiveCamera *camera = nullptr;
+
 	void notifyListenerCameraChanged();
 
 	void notifyListenerResolutionChanged(int width, int height);
 
 public:
-	Scene(int width, int height);
+	Scene();
 
 	~Scene();
+
+	void setCamera(InteractiveCamera *camera);
 
 	void
 	addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance = 0.f, float gEmittance = 0.f, float bEmittance = 0.f, float diffuse = 1.f,
 			  float specular = 0.f,
 			  float transmissive = 0.f);
+
+	void setBackgroundColor(float r, float g, float b);
 
 	void linkUpdateListener(RenderInfoListener *listener);
 
@@ -86,8 +93,6 @@ public:
 	glm::ivec2 getResolution();
 
 	Camera getRenderCamera();
-
-	InteractiveCamera camera;
 };
 
 

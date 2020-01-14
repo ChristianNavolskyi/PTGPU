@@ -8,7 +8,7 @@
 InteractiveCamera::InteractiveCamera(int width, int height) : centerPosition(0.f, 0.f, 0.f),
 															  yaw(0.f),
 															  pitch(0.f),
-															  radius(0.f),
+															  radius(1.f),
 															  resolution(width, height),
 															  fov(40.f, 40.f),
 															  viewDirection(),
@@ -73,8 +73,8 @@ void InteractiveCamera::handleMouseMovement(float xPos, float yPos)
 	lastXPos = xPos;
 	lastYPos = yPos;
 
-	changeYaw(xDelta * 0.01f);
-	changePitch(yDelta * 0.01f);
+	changeYaw(-xDelta * 0.01f);
+	changePitch(-yDelta * 0.01f);
 }
 
 void InteractiveCamera::goForward(float delta)

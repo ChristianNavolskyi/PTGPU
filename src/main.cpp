@@ -17,6 +17,8 @@ struct ReferenceHolder
 	Renderer *renderer;
 	CLTracer *tracer;
 	Scene *scene;
+	InteractiveCamera *camera;
+	int currentSceneId;
 	bool mousePressed;
 	bool showToolTip;
 };
@@ -28,23 +30,67 @@ static void printError(const char *description)
 	std::cerr << description << std::endl;
 }
 
+Scene *getCornellBoxScene(InteractiveCamera *camera)
+{
+	Scene *scene = new Scene();
+
+	scene->addSphere(201.f, 0.f, 0.f, 200.f, 0.f, 0.f, 1.f); // right wall
+	scene->addSphere(-201.f, 0.f, 0.f, 200.f, 1.f, 0.f, 0.f); // left wall
+	scene->addSphere(0.f, 0.f, -201.f, 200.f, 1.f, 1.f, 1.f); // back wall
+	scene->addSphere(0.f, -201.f, 0.f, 200.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.4f, 0.6f); // floor
+	scene->addSphere(0.f, 201.f, 0.f, 200.f, 1.f, 1.f, 1.f); // ceiling
+
+	scene->addSphere(0.f, 1.8f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f); // light source
+//	scene->addSphere(0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f); // light source
+
+	scene->addSphere(-0.7f, -0.8f, 0.f, 0.2f, 0.2f, 0.3f, 0.7f, 0.f, 0.f, 0.f, 0.2f, 0.8f); // blue sphere
+	scene->addSphere(0.7f, -0.8f, 0.f, 0.2f, 0.6f, 0.4f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f); // blue sphere
+	scene->addSphere(0.f, -0.8f, 0.f, 0.2f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 1.f); // blue sphere
+
+	camera->centerPosition = glm::vec3(0.f, 0.f, 3.f);
+	camera->yaw = 0.f;
+	camera->pitch = 0.05f;
+
+	return scene;
+}
+
+Scene *getUniverseScene(InteractiveCamera *camera)
+{
+	Scene *scene = new Scene();
+
+	scene->setBackgroundColor(0.f, 0.f, 0.f);
+
+	scene->addSphere(0.f, 0.f, 0.f, 0.75f, 0.f, 0.f, 0.f, 10.f, 10.f, 6.f); // sun
+
+	scene->addSphere(-2.f, -0.2f, 0.4f, 0.5f, 0.9f, 0.3f, 0.1f, 0.f, 0.f, 0.f); // venus
+	scene->addSphere(-5.f, 1.f, 0.f, 0.3f, 0.2f, 0.2f, 0.9f, 0.f, 0.f, 0.f); // earth
+	scene->addSphere(-4.8f, 0.5f, 0.f, 0.1f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f); // earth
+	scene->addSphere(-6.f, 2.f, 0.5f, 0.25f, 0.6f, 0.4f, 0.2f, 0.f, 0.f, 0.f); // mars
+
+	camera->centerPosition = glm::vec3(1.12f, -0.12f, 1.73f);
+	camera->yaw = 1.185;
+	camera->pitch = -0.131;
+
+	return scene;
+}
+
 void showImGuiToolTip(ReferenceHolder *holder)
 {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	glm::vec3 position = holder->scene->camera.centerPosition;
-	glm::ivec2 resolution = holder->scene->camera.resolution;
-	glm::vec3 view = holder->scene->camera.viewDirection;
+	glm::vec3 position = holder->camera->centerPosition;
+	glm::ivec2 resolution = holder->camera->resolution;
+	glm::vec3 view = holder->camera->viewDirection;
 
 	float fps = holder->tracer->getFPS();
 
 	ImGui::Begin("Scene info");
 
 	ImGui::Text("Camera Position: (%f, %f, %f)", position.x, position.y, position.z);
-	ImGui::Text("Camera Yaw: %f", holder->scene->camera.yaw);
-	ImGui::Text("Camera Pitch: %f", holder->scene->camera.pitch);
+	ImGui::Text("Camera Yaw: %f", holder->camera->yaw);
+	ImGui::Text("Camera Pitch: %f", holder->camera->pitch);
 	ImGui::Text("Camera View Direction: (%f, %f, %f)", view.x, view.y, view.z);
 	ImGui::Text("Camera Resolution: (%d, %d)", resolution.x, resolution.y);
 
@@ -91,29 +137,34 @@ void showImGuiToolTip(ReferenceHolder *holder)
 		holder->tracer->setRenderOption(RANDOM);
 	}
 
+	const char *sceneNames[] = {"Cornell Box", "Universe"};
+	ImGui::Separator();
+	if (ImGui::ListBox("Scenes", &holder->currentSceneId, sceneNames, 2))
+	{
+		delete holder->scene;
+
+		switch (holder->currentSceneId)
+		{
+		case 0:
+			holder->scene = getCornellBoxScene(holder->camera);
+			break;
+		case 1:
+			holder->scene = getUniverseScene(holder->camera);
+			break;
+		default:
+			holder->scene = getCornellBoxScene(holder->camera);
+			break;
+		}
+
+		holder->scene->setCamera(holder->camera);
+		holder->scene->linkUpdateListener(holder->tracer);
+		holder->tracer->changeScene(holder->scene);
+	}
+
 	ImGui::End();
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
-
-Scene getCornellBoxScene(int width, int height) {
-	Scene scene(width, height);
-
-	scene.addSphere(201.f, 0.f, 0.f, 200.f, 0.f, 0.f, 1.f); // right wall
-	scene.addSphere(-201.f, 0.f, 0.f, 200.f, 1.f, 0.f, 0.f); // left wall
-	scene.addSphere(0.f, 0.f, -201.f, 200.f, 1.f, 1.f, 1.f); // back wall
-	scene.addSphere(0.f, -201.f, 0.f, 200.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.4f, 0.6f); // floor
-	scene.addSphere(0.f, 201.f, 0.f, 200.f, 1.f, 1.f, 1.f); // ceiling
-
-	scene.addSphere(0.f, 1.8f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f); // light source
-//	scene.addSphere(0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f); // light source
-
-	scene.addSphere(-0.7f, -0.8f, 0.f, 0.2f, 0.2f, 0.3f, 0.7f, 0.f, 0.f, 0.f, 0.2f, 0.8f); // blue sphere
-	scene.addSphere(0.7f, -0.8f, 0.f, 0.2f, 0.6f, 0.4f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f); // blue sphere
-	scene.addSphere(0.f, -0.8f, 0.f, 0.2f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 1.f); // blue sphere
-
-	return scene;
 }
 
 int main(int, char **)
@@ -173,20 +224,23 @@ int main(int, char **)
 
 	size_t localWorkSize[] = {16, 16};
 
-	Scene scene = getCornellBoxScene(width, height);
+	auto *camera = new InteractiveCamera(width, height);
+	Scene *scene = getCornellBoxScene(camera);
+	scene->setCamera(camera);
 
 	Renderer renderer(width, height);
 	renderer.init("../src/shaders/shader.vert", "../src/shaders/shader.frag");
 
 	glFinish();
 
-	CLTracer tracer(&scene, localWorkSize);
+	CLTracer tracer(scene, localWorkSize);
 	tracer.init("../src/kernels/pathtracer.cl", renderer.getGLTextureReference());
 
 	ReferenceHolder holder{};
 	holder.renderer = &renderer;
 	holder.tracer = &tracer;
-	holder.scene = &scene;
+	holder.scene = scene;
+	holder.camera = camera;
 	holder.mousePressed = false;
 	holder.showToolTip = true;
 
