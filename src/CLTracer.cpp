@@ -53,6 +53,7 @@ bool CLTracer::init(const char *programPath, GLuint textureBufferId)
 	cl_int clError;
 
 	camera = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(Camera), nullptr, &clError);
+	sceneInfo = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(SceneInfo), nullptr, &clError);
 	V_RETURN_FALSE_CL(clError, "Failed to allocate space for camera");
 
 	updateScene();
@@ -180,11 +181,12 @@ void CLTracer::trace()
 
 	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
 	clError |= clSetKernelArg(renderKernel, 1, sizeof(cl_mem), (void *) &spheres);
-	clError |= clSetKernelArg(renderKernel, 2, sizeof(cl_int), (void *) &sphereCount);
-	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &camera);
-	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_int), (void *) &iteration);
-	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_float), (void *) &randomNumberSeed);
-	clError |= clSetKernelArg(renderKernel, 6, sizeof(cl_int), (void *) &option);
+	clError |= clSetKernelArg(renderKernel, 2, sizeof(cl_mem), (void *) &lightSpheres);
+	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &sceneInfo);
+	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_mem), (void *) &camera);
+	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_int), (void *) &iteration);
+	clError |= clSetKernelArg(renderKernel, 6, sizeof(cl_float), (void *) &randomNumberSeed);
+	clError |= clSetKernelArg(renderKernel, 7, sizeof(cl_int), (void *) &option);
 	V_RETURN_CL(clError, "Failed to set trace kernel arguments");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, renderKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
@@ -199,21 +201,19 @@ void CLTracer::trace()
 
 void CLTracer::updateScene()
 {
-	cl_int clError;
-
-	spheres = clCreateBuffer(context, CL_MEM_READ_ONLY, scene->getSphereSize(), nullptr, &clError);
-	V_RETURN_CL(clError, "Failed to allocate space for camera");
-
-	sphereCount = scene->getSphereCount();
-
 	glFinish();
 
-	clError = clEnqueueWriteBuffer(commandQueue, spheres, CL_FALSE, 0, scene->getSphereSize(), scene->getSphereData(), 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to load scene to OpenCL");
+	cl_int clError;
+
+	SAFE_RELEASE_MEMOBJECT(spheres);
+	SAFE_RELEASE_MEMOBJECT(lightSpheres);
+
+	spheres = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, scene->getSphereSize(), scene->getSphereData(), &clError);
+	lightSpheres = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, scene->getLightSphereSize(), scene->getLightSphereData(), &clError);
+	clError |= clEnqueueWriteBuffer(commandQueue, sceneInfo, CL_FALSE, 0, sizeof(SceneInfo), scene->getSceneInfo(), 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to initialize buffers for scene info");
 
 	clFinish(commandQueue);
-
-	updateCamera();
 
 	glm::ivec2 resolution = scene->getResolution();
 	notifySizeChanged(resolution.x, resolution.y);
@@ -271,7 +271,7 @@ void CLTracer::updateCamera()
 	cl_int clError;
 
 	Camera renderCamera = scene->getRenderCamera();
-	clError = clEnqueueWriteBuffer(commandQueue, camera, CL_TRUE, 0, sizeof(Camera), &renderCamera, 0, nullptr, nullptr);
+	clError = clEnqueueWriteBuffer(commandQueue, camera, CL_FALSE, 0, sizeof(Camera), &renderCamera, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to load scene and/or camera to OpenCL");
 
 	clFinish(commandQueue);

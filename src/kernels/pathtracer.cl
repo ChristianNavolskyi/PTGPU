@@ -14,16 +14,21 @@ typedef struct
     float3 position;
     float4 color;
     float4 emittance;
-    float3 surfaceCharacteristic;
+    float3 surfaceCharacteristic; // diffuse, specular, transmissive distribution
 } Sphere;
 
-typedef struct {
-    Sphere *lightSpheres;
-    int *lightSphereIds;
-    float *lightSphereRadiance;
-    float totalRadiance;
-    int lightSphereCount;
-} LightSphereHolder;
+typedef struct
+{
+	int sphereId;
+	int radiance;
+} LightSphere;
+
+typedef struct
+{
+	int sphereCount;
+	int lightSphereCount;
+	int totalRadiance;
+} SceneInfo;
 
 typedef struct
 {
@@ -62,9 +67,8 @@ typedef struct
 
 float3 reflect(Ray *ray, float3 normal);
 
-int selectLightSpheres(__constant Sphere *spheres, Sphere *lightSpheres, int *lightSphereIds, float *lightSphereRadiance, int sphereCount, float *totalRadiance);
 float4 showDebugVision(Intersection *intersection, int options, float rand0, float rand1, float rand2);
-float4 nextEventEstimation(__constant Sphere *spheres, int sphereCount, Intersection *intersection, LightSphereHolder *lightSphereHolder, float rand0, float rand1, float rand2);
+float4 nextEventEstimation(__constant Sphere *spheres, Intersection *intersection, __constant LightSphere *lightSpheres, __constant SceneInfo *sceneInfo, float rand0, float rand1, float rand2);
 
 static float random(float x, float y, float z);
 float3 sampleCosHemisphere(float exp, float rand1, float rand2);
@@ -78,31 +82,6 @@ bool findIntersection(Ray *ray, Intersection *intersection, __constant Sphere *s
 float3 reflect(Ray *ray, float3 normal)
 {
     return ray->direction + 2.f * normal * dot(normal, -ray->direction);
-}
-
-int selectLightSpheres(__constant Sphere *spheres, Sphere *lightSpheres, int *lightSphereIds, float *lightSphereRadiance, int sphereCount, float *totalRadiance)
-{
-    int lightSphereCount = 0;
-    *totalRadiance = 0;
-
-    for (int i = 0; i < sphereCount; i++)
-    {
-        Sphere currentSphere = spheres[i];
-        float4 emittance = currentSphere.emittance;
-
-        if (length(emittance.xyz) > EPSILON)
-        { // emittance is not zero
-            lightSpheres[lightSphereCount] = spheres[i];
-            lightSphereRadiance[lightSphereCount] = emittance.x + emittance.y + emittance.z;
-            lightSphereIds[lightSphereCount] = i;
-
-            *totalRadiance += lightSphereRadiance[lightSphereCount];
-
-            lightSphereCount++;
-        }
-    }
-
-    return lightSphereCount;
 }
 
 float4 showDebugVision(Intersection *intersection, int options, float rand0, float rand1, float rand2)
@@ -135,26 +114,26 @@ float4 showDebugVision(Intersection *intersection, int options, float rand0, flo
     return (float4)0.f;
 }
 
-float4 nextEventEstimation(__constant Sphere *spheres, int sphereCount, Intersection *intersection, LightSphereHolder *lightSphereHolder, float rand0, float rand1, float rand2)
+float4 nextEventEstimation(__constant Sphere *spheres, Intersection *intersection, __constant LightSphere *lightSpheres, __constant SceneInfo *sceneInfo, float rand0, float rand1, float rand2)
 {
-    float4 directLight = 1.f;
+    float4 directLight = (float4) 1.f;
 
     float lightSelector = rand0;
-    Sphere *selectedLightSource;
+    __constant Sphere *selectedLightSource;
     int selectedLightSourceId;
 
-    for (int i = 0; i < lightSphereHolder->lightSphereCount; i++)
+    float radianceContribution = 0.f;
+
+    for (int i = 0; i < sceneInfo->lightSphereCount; i++)
     {
-        float radianceContribution = lightSphereHolder->lightSphereRadiance[i] / lightSphereHolder->totalRadiance;
+        radianceContribution += lightSpheres[i].radiance / sceneInfo->totalRadiance;
+
         if (lightSelector < radianceContribution)
         {
-            selectedLightSource = &lightSphereHolder->lightSpheres[i];
+            selectedLightSourceId = lightSpheres[i].sphereId;
+            selectedLightSource = &spheres[selectedLightSourceId];
             directLight /= radianceContribution;
-            selectedLightSourceId = lightSphereHolder->lightSphereIds[i];
-        }
-        else
-        {
-            lightSelector -= lightSphereHolder->lightSphereRadiance[i];
+            break;
         }
     }
 
@@ -173,7 +152,7 @@ float4 nextEventEstimation(__constant Sphere *spheres, int sphereCount, Intersec
     else
     {
         float3 hemisphereSample = sampleCosHemisphere(0.f, rand1, rand2);
-        float3 pointOnLightSphere = selectedLightSource->position + transformIntoTangentSpace(-directionToLight, hemisphereSample);
+        float3 pointOnLightSphere = selectedLightSource->position + transformIntoTangentSpace(-directionToLight, hemisphereSample) * selectedLightSource->radius;
         lightRay.direction = normalize(pointOnLightSphere - intersection->position);
 
         float3 normalAtLightPoint = normalize(pointOnLightSphere - selectedLightSource->position);
@@ -187,7 +166,7 @@ float4 nextEventEstimation(__constant Sphere *spheres, int sphereCount, Intersec
 
     Intersection lightIntersection;
 
-    if (findIntersection(&lightRay, &lightIntersection, spheres, sphereCount) && lightIntersection.sphereId == selectedLightSourceId)
+    if (findIntersection(&lightRay, &lightIntersection, spheres, sceneInfo->sphereCount) && lightIntersection.sphereId == selectedLightSourceId)
     { // first intersection is with selected light source
         directLight *= selectedLightSource->emittance;
     }
@@ -359,7 +338,7 @@ bool findIntersection(Ray *ray, Intersection *intersection, __constant Sphere *s
     return false;
 }
 
-__kernel void render(__global float4 *image, __constant Sphere *spheres, const int sphereCount, __constant Camera *camera, const int iteration, const float seed, const int options)
+__kernel void render(__global float4 *image, __constant Sphere *spheres, __constant LightSphere *lightSpheres, __constant SceneInfo *sceneInfo, __constant Camera *camera, const int iteration, const float seed, const int options)
 {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
@@ -367,19 +346,6 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
     int height = camera->resolution.y;
 
     int position = gy * width + gx;
-
-    Sphere lightSpheres[sphereCount];
-    int lightSphereIds[sphereCount];
-    float lightSphereRadiance[sphereCount];
-    float totalRadiance = 0;
-    int lightSphereCount = selectLightSpheres(spheres, lightSpheres, lightSphereIds, lightSphereRadiance, sphereCount, &totalRadiance);
-
-    LightSphereHolder lightSphereHolder;
-    lightSphereHolder.lightSpheres = lightSpheres;
-    lightSphereHolder.lightSphereIds = lightSphereIds;
-    lightSphereHolder.lightSphereRadiance = lightSphereRadiance;
-    lightSphereHolder.totalRadiance = totalRadiance;
-    lightSphereHolder.lightSphereCount = lightSphereCount;
 
     Ray ray = getCameraRay(camera, gx, gy, iteration, seed);
 
@@ -390,7 +356,7 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
     {
         Intersection intersection;
 
-        if (findIntersection(&ray, &intersection, spheres, sphereCount))
+        if (findIntersection(&ray, &intersection, spheres, sceneInfo->sphereCount))
         {
             float rand0 = random((gx + iteration) / (float)width, gy / (float)height, seed);
             float rand1 = random(gx / (float)width, (gy + iteration) / (float)height, seed);
@@ -405,10 +371,10 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, const i
 
             float4 emittedLight = intersection.sphere->emittance;
             L += emittedLight * brdfCosFactor;
-//
+
             brdfCosFactor *= intersection.sphere->color;
-//
-            float4 directLight = nextEventEstimation(spheres, sphereCount, &intersection, &lightSphereHolder, rand0, rand1, rand2);
+
+            float4 directLight = nextEventEstimation(spheres, &intersection, lightSpheres, sceneInfo, rand0, rand1, rand2);
             L += directLight * brdfCosFactor;
 
             float3 newDirection;

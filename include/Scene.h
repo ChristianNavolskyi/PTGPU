@@ -22,6 +22,19 @@ typedef struct Sphere
 	cl_float3 surfaceCharacteristic;
 } Sphere;
 
+typedef struct LightSphere
+{
+	cl_int sphereId;
+	cl_int radiance;
+} LightSphere;
+
+typedef struct SceneInfo
+{
+	cl_int sphereCount;
+	cl_int lightSphereCount;
+	cl_int totalRadiance;
+} SceneInfo;
+
 enum SceneMovementDirections
 {
 	UP, DOWN, LEFT, RIGHT, FORWARD, BACKWARD, YAW_LEFT, YAW_RIGHT, PITCH_DOWN, PITCH_UP
@@ -31,6 +44,9 @@ class Scene
 {
 private:
 	std::vector<Sphere> spheres;
+	std::vector<LightSphere> lightSpheres;
+	SceneInfo sceneInfo;
+
 	RenderInfoListener *changeListener = nullptr;
 
 	void notifyListenerCameraChanged();
@@ -42,16 +58,22 @@ public:
 
 	~Scene();
 
-	void addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance = 0.f, float gEmittance = 0.f, float bEmittance = 0.f, float diffuse = 1.f, float specular = 0.f,
-				   float transmissive = 0.f);
+	void
+	addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance = 0.f, float gEmittance = 0.f, float bEmittance = 0.f, float diffuse = 1.f,
+			  float specular = 0.f,
+			  float transmissive = 0.f);
 
 	void linkUpdateListener(RenderInfoListener *listener);
 
 	size_t getSphereSize();
 
-	const Sphere *getSphereData();
+	Sphere *getSphereData();
 
-	cl_int getSphereCount();
+	size_t getLightSphereSize();
+
+	LightSphere *getLightSphereData();
+
+	SceneInfo *getSceneInfo();
 
 	void initialMousePosition(float xPos, float yPos);
 

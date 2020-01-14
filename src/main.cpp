@@ -107,6 +107,7 @@ Scene getCornellBoxScene(int width, int height) {
 	scene.addSphere(0.f, 201.f, 0.f, 200.f, 1.f, 1.f, 1.f); // ceiling
 
 	scene.addSphere(0.f, 1.8f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f); // light source
+//	scene.addSphere(0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f); // light source
 
 	scene.addSphere(-0.7f, -0.8f, 0.f, 0.2f, 0.2f, 0.3f, 0.7f, 0.f, 0.f, 0.f, 0.2f, 0.8f); // blue sphere
 	scene.addSphere(0.7f, -0.8f, 0.f, 0.2f, 0.6f, 0.4f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f); // blue sphere

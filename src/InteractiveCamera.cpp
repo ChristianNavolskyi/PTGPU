@@ -8,7 +8,7 @@
 InteractiveCamera::InteractiveCamera(int width, int height) : centerPosition(0.f, 0.f, 0.f),
 															  yaw(0.f),
 															  pitch(0.f),
-															  radius(4.f),
+															  radius(0.f),
 															  resolution(width, height),
 															  fov(40.f, 40.f),
 															  viewDirection(),

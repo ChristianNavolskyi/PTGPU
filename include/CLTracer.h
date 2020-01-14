@@ -36,18 +36,18 @@ private:
 	cl_mem image = nullptr;
 	cl_mem camera = nullptr;
 	cl_mem spheres = nullptr;
-	cl_int sphereCount = 0;
+	cl_mem lightSpheres = nullptr;
+	cl_mem sceneInfo = nullptr;
 
 	GLuint textureTargetId = 0;
 
 	size_t localWorkSize[2] = {0, 0};
 	size_t globalWorkSize[2] = {0, 0};
-	Scene *scene;
 
+	Scene *scene;
 	RenderOption option = DEFAULT;
 
 	long renderStartTime = -1;
-
 	int width = 0, height = 0;
 
 	void loadContext();
