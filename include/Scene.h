@@ -19,15 +19,8 @@ typedef struct Sphere
 	cl_float3 position;
 	cl_float3 color;
 	cl_float4 emittance;
-	cl_int surfaceCharacteristic;
+	cl_float3 surfaceCharacteristic;
 } Sphere;
-
-enum SurfaceCharacteristic {
-	DIFFUSE = (1 << 0),
-	SPECULAR = (1 << 1),
-
-
-};
 
 enum SceneMovementDirections
 {
@@ -49,8 +42,8 @@ public:
 
 	~Scene();
 
-	void addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance, float gEmittance, float bEmittance,
-				   SurfaceCharacteristic surfaceCharacteristic);
+	void addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance = 0.f, float gEmittance = 0.f, float bEmittance = 0.f, float diffuse = 1.f, float specular = 0.f,
+				   float transmissive = 0.f);
 
 	void linkUpdateListener(RenderInfoListener *listener);
 

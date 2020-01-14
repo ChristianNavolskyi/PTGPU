@@ -15,15 +15,18 @@ Scene::~Scene()
 	spheres.clear();
 }
 
-void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance, float gEmittance, float bEmittance,
-					  SurfaceCharacteristic surfaceCharacteristic)
+void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance, float gEmittance, float bEmittance, float diffuse, float specular,
+					  float transmissive)
 {
+	glm::vec3 surfaceCharacteristic(diffuse, specular, transmissive);
+	surfaceCharacteristic = glm::normalize(surfaceCharacteristic);
+
 	Sphere sphere{};
 	sphere.radius = radius;
 	sphere.position = {{xPos, yPos, zPos}};
 	sphere.color = {{rColor, gColor, bColor, 1.f}};
 	sphere.emittance = {{rEmittance, gEmittance, bEmittance, 1.f}};
-	sphere.surfaceCharacteristic = surfaceCharacteristic;
+	sphere.surfaceCharacteristic = {{surfaceCharacteristic.x, surfaceCharacteristic.y, surfaceCharacteristic.z}};
 
 	spheres.push_back(sphere);
 }

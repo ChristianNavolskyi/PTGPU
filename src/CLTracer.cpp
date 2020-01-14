@@ -75,8 +75,7 @@ void CLTracer::loadContext()
 
 	context = clCreateContext(props, 0, nullptr, [](const char *errinfo, const void *private_info, size_t cb, void *user_data) -> void
 	{
-		/* context-creation and runtime error handler */
-		std::cout << "Context error: " << errinfo << std::endl;
+		std::cout << errinfo << std::endl;
 	}, nullptr, &clError);
 	V_RETURN_CL(clError, "Failed to create OpenCL context.");
 }

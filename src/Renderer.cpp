@@ -88,6 +88,7 @@ Renderer::~Renderer()
 	glDeleteBuffers(1, &vertexArrayId);
 	glDeleteBuffers(1, &vertexBufferId);
 	glDeleteBuffers(1, &textureCoordinateBufferId);
+	glDeleteBuffers(1, &pixelBufferId);
 	glDeleteTextures(1, &textureId);
 }
 
