@@ -5,9 +5,9 @@
 #include "InteractiveCamera.h"
 #include <algorithm>
 
-InteractiveCamera::InteractiveCamera(int width, int height) : centerPosition(-0.289f, 0.3577f, -0.023f),
-															  yaw(-2.38f),
-															  pitch(-0.3f),
+InteractiveCamera::InteractiveCamera(int width, int height) : centerPosition(0.f, 0.f, 0.f),
+															  yaw(0.f),
+															  pitch(0.f),
 															  radius(4.f),
 															  resolution(width, height),
 															  fov(40.f, 40.f),

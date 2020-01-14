@@ -97,6 +97,24 @@ void showImGuiToolTip(ReferenceHolder *holder)
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
+Scene getCornellBoxScene(int width, int height) {
+	Scene scene(width, height);
+
+	scene.addSphere(201.f, 0.f, 0.f, 200.f, 0.f, 0.f, 1.f); // right wall
+	scene.addSphere(-201.f, 0.f, 0.f, 200.f, 1.f, 0.f, 0.f); // left wall
+	scene.addSphere(0.f, 0.f, -201.f, 200.f, 1.f, 1.f, 1.f); // back wall
+	scene.addSphere(0.f, -201.f, 0.f, 200.f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.4f, 0.6f); // floor
+	scene.addSphere(0.f, 201.f, 0.f, 200.f, 1.f, 1.f, 1.f); // ceiling
+
+	scene.addSphere(0.f, 1.8f, 0.f, 1.f, 0.f, 0.f, 0.f, 1.f, 1.f, 1.f); // light source
+
+	scene.addSphere(-0.7f, -0.8f, 0.f, 0.2f, 0.2f, 0.3f, 0.7f, 0.f, 0.f, 0.f, 0.2f, 0.8f); // blue sphere
+	scene.addSphere(0.7f, -0.8f, 0.f, 0.2f, 0.6f, 0.4f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f); // blue sphere
+	scene.addSphere(0.f, -0.8f, 0.f, 0.2f, 1.f, 1.f, 1.f, 0.f, 0.f, 0.f, 1.f); // blue sphere
+
+	return scene;
+}
+
 int main(int, char **)
 {
 	// Setup window
@@ -154,16 +172,7 @@ int main(int, char **)
 
 	size_t localWorkSize[] = {16, 16};
 
-	Scene scene(width, height);
-//	scene.addSphere(-201.f, 0.f, 0.f, 200.f, 0.9f, 0.f, 0.5f, 0.f, 0.f, 0.f, DIFFUSE); // left wall
-//	scene.addSphere(201.f, 0.f, 0.f, 200.f, 0.f, 0.8f, 0.5f, 0.f, 0.f, 0.f, DIFFUSE); // right wall
-//	scene.addSphere(0.f, 0.f, -201.f, 200.f, 0.f, 0.8f, 0.5f, 0.f, 0.f, 0.f, DIFFUSE); // front wall
-//	scene.addSphere(0.f, -200.4f, 0.f, 200.f, 0.9f, 0.3f, 0.f, 0.f, 0.f, 0.f, DIFFUSE); // floor
-	scene.addSphere(-0.25f, 0.f, 0.f, 0.16f, 1.f, 1.f, 0.7f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f); // left
-	scene.addSphere(0.25f, 0.f, 0.f, 0.16f, 0.f, 1.f, 1.f, 0.f, 0.f, 0.f, 0.5f, 0.5f, 0.f); // right
-	scene.addSphere(0.f, 0.25f, 0.f, 0.16f, 0.f, 1.f, 1.f, 0.f, 0.f, 0.f, 1.f, 0.0f, 0.f); // right
-	scene.addSphere(0.f, 1.36f, -0.2f, 0.5f, 0.f, 0.f, 0.f, 0.9f, 0.9f, 0.85f, 1.f, 0.f, 0.f); // light
-//	scene.addSphere(1.f, 1.f, -20.f, 2.f, 0.f, 1.f, 0.f, 0.f, 1.f, 0.f);
+	Scene scene = getCornellBoxScene(width, height);
 
 	Renderer renderer(width, height);
 	renderer.init("../src/shaders/shader.vert", "../src/shaders/shader.frag");

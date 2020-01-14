@@ -257,7 +257,7 @@ Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, c
     float3 vertical = vVector * verticalFactor;
 
     int xPixel = x;
-    int yPixel = y; //resolution.y - y - 1;
+    int yPixel = resolution.y - y - 1;
 
     // pixel offset for anti-aliasing
     float randX = random((x + 7.5f) * 1000.f / 3.f, (float)iteration, seed);
