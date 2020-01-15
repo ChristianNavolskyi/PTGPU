@@ -67,6 +67,7 @@ typedef struct
 #define EPSILON 0.00001f
 
 float3 reflect(Ray *ray, float3 normal);
+void createOrthonormalAxes(float3 z, float3 *x, float3 *y);
 
 float4 showDebugVision(Intersection *intersection, int options, float rand0, float rand1, float rand2);
 float4 nextEventEstimation(__constant Sphere *spheres, Intersection *intersection, __constant LightSphere *lightSpheres, __constant SceneInfo *sceneInfo, float rand0, float rand1, float rand2);
@@ -119,7 +120,6 @@ float4 nextEventEstimation(__constant Sphere *spheres, Intersection *intersectio
 {
     float4 directLight = (float4) 1.f;
 
-    float lightSelector = rand0;
     __constant Sphere *selectedLightSource;
     int selectedLightSourceId;
 
@@ -129,7 +129,7 @@ float4 nextEventEstimation(__constant Sphere *spheres, Intersection *intersectio
     {
         radianceContribution += lightSpheres[i].radiance / sceneInfo->totalRadiance;
 
-        if (lightSelector < radianceContribution)
+        if (rand0 < radianceContribution)
         {
             selectedLightSourceId = lightSpheres[i].sphereId;
             selectedLightSource = &spheres[selectedLightSourceId];
@@ -142,9 +142,11 @@ float4 nextEventEstimation(__constant Sphere *spheres, Intersection *intersectio
 
     Ray lightRay;
 
+    float3 distanceToSphere;
+
     if (selectedLightSource->radius < EPSILON)
     { // point light source
-        lightRay.direction = normalize(selectedLightSource->position - intersection->position);
+        distanceToSphere = selectedLightSource->position - intersection->position;
 
         directLight /= (4 * M_PI_F); // pdf
         directLight /= pow(length(selectedLightSource->position - intersection->position), 2.f); // distance falloff
@@ -154,7 +156,8 @@ float4 nextEventEstimation(__constant Sphere *spheres, Intersection *intersectio
     {
         float3 hemisphereSample = sampleCosHemisphere(0.f, rand1, rand2);
         float3 pointOnLightSphere = selectedLightSource->position + transformIntoTangentSpace(-directionToLight, hemisphereSample) * selectedLightSource->radius;
-        lightRay.direction = normalize(pointOnLightSphere - intersection->position);
+
+        distanceToSphere = pointOnLightSphere - intersection->position;
 
         float3 normalAtLightPoint = normalize(pointOnLightSphere - selectedLightSource->position);
 
@@ -164,10 +167,14 @@ float4 nextEventEstimation(__constant Sphere *spheres, Intersection *intersectio
     }
 
     lightRay.origin = intersection->position + intersection->normal * EPSILON;
+    lightRay.direction = normalize(distanceToSphere);
+
+    float minT = length(distanceToSphere);
 
     Intersection lightIntersection;
+    bool found = findIntersection(&lightRay, &lightIntersection, spheres, sceneInfo->sphereCount);
 
-    if (findIntersection(&lightRay, &lightIntersection, spheres, sceneInfo->sphereCount) && lightIntersection.sphereId == selectedLightSourceId)
+    if (found && lightIntersection.sphereId == selectedLightSourceId/* || minT < lightIntersection.t*/)
     { // first intersection is with selected light source
         directLight *= selectedLightSource->emittance;
     }
@@ -190,7 +197,7 @@ float3 sampleCosHemisphere(float exp, float rand1, float rand2)
     float phi = 2 * M_PI_F * rand1;
     float theta = acos(pow(1 - rand2, 1 / (exp + 1)));
 
-    return (float3)(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+    return normalize((float3)(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta)));
 }
 
 float sampleCosHemispherePDF(float exp, float cosTheta)
@@ -198,18 +205,29 @@ float sampleCosHemispherePDF(float exp, float cosTheta)
     return (exp + 1) / (2 * M_PI_F) * pow(cosTheta, exp);
 }
 
+void createOrthonormalAxes(float3 z, float3 *x, float3 *y) {
+    float3 helpAxis = fabs(z.x) > 0.1f ? (float3) (0.f, 1.f, 0.f) : (float3) (1.f, 0.f, 0.f);
+
+    *x = normalize(cross(helpAxis, z));
+    *y = normalize(cross(z, *x));
+}
+
 float3 transformIntoWorldSpace(float3 w, float3 direction)
 {
-    float3 u = normalize((float3)(0.f, -w.z, w.y));
-    float3 v = normalize(cross(w, u));
+    float3 u;
+    float3 v;
+
+    createOrthonormalAxes(w, &u, &v);
 
     return (float3)(dot(u, direction), dot(v, direction), dot(w, direction));
 }
 
 float3 transformIntoTangentSpace(float3 w, float3 direction)
 {
-    float3 u = normalize((float3)(0.f, -w.z, w.y));
-    float3 v = normalize(cross(w, u));
+    float3 u;
+    float3 v;
+
+    createOrthonormalAxes(w, &u, &v);
 
     float3 uTransposed = (float3)(u.x, v.x, w.x);
     float3 vTransposed = (float3)(u.y, v.y, w.y);
@@ -229,6 +247,7 @@ Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, c
     float3 uVector = normalize(cross(up, wVector));
     float3 vVector = normalize(cross(wVector, uVector));
 
+    // TODO fov -> aspect ratio
     float horizontalFactor = tan(camera->fov.x * 0.5f * (M_PI_F / 180));
     float verticalFactor = tan(camera->fov.y * -0.5f * (M_PI_F / 180));
 
@@ -359,12 +378,6 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
             float rand1 = random(gx / (float)width, (gy + iteration) / (float)height, seed);
             float rand2 = random(gx / (float)width, gy / (float)height, seed + iteration);
 
-//            float3 up = (float3) (0.f, 1.f, 0.f);
-//
-//            L.xyz = sampleCosHemisphere(100.f, rand0, rand1);
-//            break;
-
-
             if (options != DEFAULT)
             {
                 L = showDebugVision(&intersection, options, rand0, rand1, rand2);
@@ -405,7 +418,6 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
         }
         else
         {
-//                        L += (float4)((ray.direction + 1.f) / 2.f, 1.f);
             L += (float4)(sceneInfo->backgroundColor, 1.f) * brdfCosFactor;
             break;
         }
