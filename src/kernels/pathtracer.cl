@@ -294,7 +294,6 @@ Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, c
     float3 uVector = normalize(cross(up, wVector));
     float3 vVector = normalize(cross(wVector, uVector));
 
-    // TODO fov -> aspect ratio
     float horizontalFactor = tan(camera->fov.x * 0.5f * (M_PI_F / 180)) * aspectRatio;
     float verticalFactor = tan(camera->fov.y * -0.5f * (M_PI_F / 180));
 

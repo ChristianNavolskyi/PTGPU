@@ -70,9 +70,9 @@ Scene *getCornellBoxSceneSinglePointLight(InteractiveCamera *camera)
 	scene->addSphere(0.2f, glm::vec3(0.7f, -0.8f, 0.f), glm::vec3(1.f), glm::vec3(0.f), 1.f); // white sphere
 	scene->addSphere(0.2f, glm::vec3(0.f, -0.8f, 0.f), glm::vec3(0.3f, 0.4f, 0.9f), glm::vec3(0.f), 0.4f, 0.6f); // blue sphere
 
-	camera->centerPosition = glm::vec3(0.f, 0.f, 3.f);
-	camera->yaw = 0.f;
-	camera->pitch = 0.05f;
+	camera->centerPosition = glm::vec3(-0.385f, 0.102f, 2.001f);
+	camera->yaw = -0.418f;
+	camera->pitch = 0.533f;
 
 	return scene;
 }
@@ -96,9 +96,9 @@ Scene *getCornellBoxSceneWithMultipleLights(InteractiveCamera *camera)
 	scene->addSphere(0.2f, glm::vec3(0.7f, -0.8f, 0.f), glm::vec3(1.f), glm::vec3(0.f), 1.f); // white sphere
 	scene->addSphere(0.2f, glm::vec3(0.f, -0.8f, 0.f), glm::vec3(0.3f, 0.4f, 0.9f), glm::vec3(0.f), 0.4f, 0.6f); // blue sphere
 
-	camera->centerPosition = glm::vec3(0.f, 0.f, 3.f);
-	camera->yaw = 0.f;
-	camera->pitch = 0.05f;
+	camera->centerPosition = glm::vec3(-0.385f, 0.102f, 2.001f);
+	camera->yaw = -0.418f;
+	camera->pitch = 0.533f;
 
 	return scene;
 }
