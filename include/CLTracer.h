@@ -30,8 +30,9 @@ private:
 	cl_context context = nullptr;
 	cl_command_queue commandQueue = nullptr;
 
-	cl_kernel renderKernel = nullptr;
 	cl_program program = nullptr;
+	cl_kernel renderKernel = nullptr;
+	cl_kernel clearKernel = nullptr;
 
 	cl_mem image = nullptr;
 	cl_mem camera = nullptr;
@@ -67,6 +68,8 @@ private:
 	void updateScene();
 
 	void updateRenderTarget();
+
+	void clearImage();
 
 	cl_mem createValidBuffer(void *data, size_t size, cl_int *clError);
 

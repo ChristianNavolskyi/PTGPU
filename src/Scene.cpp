@@ -90,6 +90,12 @@ void Scene::addTriangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 colo
 	triangles.push_back(triangle);
 }
 
+void Scene::addPlane(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4, glm::vec3 color, glm::vec3 emittance, float diffuse, float specular, float transmissive)
+{
+	addTriangle(p1, p2, p3, color, emittance, diffuse, specular, transmissive);
+	addTriangle(p2, p3, p4, color, emittance, diffuse, specular, transmissive);
+}
+
 void Scene::setBackgroundColor(float r, float g, float b)
 {
 	sceneInfo.backgroundColor = {{r, g, b}};
@@ -120,11 +126,11 @@ LightSphere *Scene::getLightSphereData()
 	return &lightSpheres[0];
 }
 
+
 size_t Scene::getLightSphereSize()
 {
 	return sizeof(LightSphere) * lightSpheres.size();
 }
-
 
 Triangle *Scene::getTriangleData()
 {

@@ -47,6 +47,7 @@ bool CLTracer::init(const char *programPath, GLuint textureBufferId)
 
 	loadProgram(programPath);
 	loadKernel(&renderKernel, "render");
+	loadKernel(&clearKernel, "clear");
 
 	this->textureTargetId = textureBufferId;
 
@@ -93,13 +94,14 @@ void CLTracer::loadDevice()
 	int deviceCount = returnedSize / sizeof(cl_device_id);
 	bool deviceFound = false;
 
-	std::cout << "Got " << deviceCount << " devices: " << std::endl;
+	std::cout << "Got " << deviceCount << " device(s): " << std::endl;
 
 	for (int i = 0; i < deviceCount; i++)
 	{
-		cl_device_type deviceType;
 		int nameSize = 512;
 		char deviceName[nameSize];
+		cl_device_type deviceType;
+		cl_uint computeUnits;
 		size_t actualSize;
 
 		clError = clGetDeviceInfo(deviceIds[i], CL_DEVICE_NAME, sizeof(char) * nameSize, deviceName, &actualSize);
@@ -109,6 +111,10 @@ void CLTracer::loadDevice()
 		clError = clGetDeviceInfo(deviceIds[i], CL_DEVICE_TYPE, sizeof(cl_device_type), &deviceType, &actualSize);
 		V_RETURN_CL(clError, "Failed to read device type");
 		std::cout << "\tDevice[" << i << "]: Device Type - " << deviceType << std::endl;
+
+		clError = clGetDeviceInfo(deviceIds[i], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &computeUnits, &actualSize);
+		V_RETURN_CL(clError, "Failed to read device type");
+		std::cout << "\tDevice[" << i << "]: Compute Units - " << computeUnits << std::endl;
 
 		if (deviceType == CL_DEVICE_TYPE_GPU)
 		{
@@ -208,6 +214,28 @@ void CLTracer::trace()
 	clFinish(commandQueue);
 }
 
+void CLTracer::clearImage()
+{
+	glFinish();
+
+	cl_int clError;
+
+	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to acquire buffer for OpenCL");
+
+	clError = clSetKernelArg(clearKernel, 0, sizeof(cl_mem), (void *) &image);
+	clError |= clSetKernelArg(clearKernel, 1, sizeof(cl_int), (void *) &width);
+	V_RETURN_CL(clError, "Failed to set trace kernel arguments");
+
+	clError = clEnqueueNDRangeKernel(commandQueue, clearKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to enqueue trace kernel task");
+
+	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to release buffer from OpenCL");
+
+	clFinish(commandQueue);
+}
+
 void CLTracer::updateScene()
 {
 	glFinish();
@@ -221,9 +249,9 @@ void CLTracer::updateScene()
 
 	spheres = createValidBuffer(scene->getSphereData(), scene->getSphereSize(), &clError);
 	lightSpheres = createValidBuffer(scene->getLightSphereData(), scene->getLightSphereSize(), &clError);
-//	triangles = createValidBuffer(scene->getTriangleData(), scene->getTriangleSize(), &clError);
-//	lightTriangles = createValidBuffer(scene->getLightTriangleData(), scene->getLightTriangleSize(), &clError);
-//	V_RETURN_CL(clError, "Failed to initialize buffers for scene description");
+	triangles = createValidBuffer(scene->getTriangleData(), scene->getTriangleSize(), &clError);
+	lightTriangles = createValidBuffer(scene->getLightTriangleData(), scene->getLightTriangleSize(), &clError);
+	V_RETURN_CL(clError, "Failed to initialize buffers for scene description");
 
 	clError = clEnqueueWriteBuffer(commandQueue, sceneInfo, CL_FALSE, 0, sizeof(SceneInfo), scene->getSceneInfo(), 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to write scene info");
@@ -256,6 +284,8 @@ void CLTracer::changeScene(Scene *scene)
 
 void CLTracer::resetRendering()
 {
+	clearImage();
+
 	iteration = 0;
 	renderStartTime = getCurrentTime();
 }

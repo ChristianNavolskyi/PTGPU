@@ -87,6 +87,8 @@ public:
 
 	void addTriangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 color, glm::vec3 emittance = glm::vec3(0.f), float diffuse = 1.f, float specular = 0.f, float transmissive = 0.f);
 
+	void addPlane(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 p4, glm::vec3 color, glm::vec3 emittance = glm::vec3(0.f), float diffuse = 1.f, float specular = 0.f, float transmissive = 0.f);
+
 	void setBackgroundColor(float r, float g, float b);
 
 	void linkUpdateListener(RenderInfoListener *listener);
