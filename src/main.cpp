@@ -30,7 +30,31 @@ static void printError(const char *description)
 	std::cerr << description << std::endl;
 }
 
-Scene *getCornellBoxScene(InteractiveCamera *camera)
+Scene *getCornellBoxSceneSingleAreaLight(InteractiveCamera *camera)
+{
+	Scene *scene = new Scene();
+
+	scene->addSphere(200.f, glm::vec3(201.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f)); // right wall
+	scene->addSphere(200.f, glm::vec3(-201.f, 0.f, 0.f), glm::vec3(1.f, 0.f, 0.f)); // left wall
+	scene->addSphere(200.f, glm::vec3(0.f, 0.f, -201.f), glm::vec3(1.f, 1.f, 1.f)); // front wall
+	scene->addSphere(200.f, glm::vec3(0.f, 0.f, 210.f), glm::vec3(1.f, 1.f, 1.f)); // back wall
+	scene->addSphere(200.f, glm::vec3(0.f, -201.f, 0.f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f, 0.f, 0.f), 0.4f, 0.6f); // floor
+	scene->addSphere(200.f, glm::vec3(0.f, 201.f, 0.f), glm::vec3(1.f, 1.f, 1.f)); // ceiling
+
+	scene->addSphere(1.f, glm::vec3(0.f, 1.8f, 0.f), glm::vec3(0.f), glm::vec3(10.f)); // light source
+
+	scene->addSphere(0.2f, glm::vec3(-0.7f, -0.8f, 0.f), glm::vec3(0.8f, 0.3f, 0.1f), glm::vec3(0.f), 0.1f, 0.9f); // red sphere
+	scene->addSphere(0.2f, glm::vec3(0.7f, -0.8f, 0.f), glm::vec3(1.f), glm::vec3(0.f), 1.f); // white sphere
+	scene->addSphere(0.2f, glm::vec3(0.f, -0.8f, 0.f), glm::vec3(0.3f, 0.4f, 0.9f), glm::vec3(0.f), 0.4f, 0.6f); // blue sphere
+
+	camera->centerPosition = glm::vec3(-0.385f, 0.102f, 2.001f);
+	camera->yaw = -0.418f;
+	camera->pitch = 0.533f;
+
+	return scene;
+}
+
+Scene *getCornellBoxSceneSinglePointLight(InteractiveCamera *camera)
 {
 	Scene *scene = new Scene();
 
@@ -40,8 +64,33 @@ Scene *getCornellBoxScene(InteractiveCamera *camera)
 	scene->addSphere(200.f, glm::vec3(0.f, -201.f, 0.f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f, 0.f, 0.f), 0.4f, 0.6f); // floor
 	scene->addSphere(200.f, glm::vec3(0.f, 201.f, 0.f), glm::vec3(1.f, 1.f, 1.f)); // ceiling
 
-	scene->addSphere(1.f, glm::vec3(0.f, 1.8f, 0.f), glm::vec3(0.f), glm::vec3(1.f)); // light source
-//	scene->addSphere(0.f, glm::vec3(-0.35f, -0.5f, 0.5f), glm::vec3(0.f), glm::vec3(1.f, 1.f, 0.4f)); // point light source
+	scene->addSphere(0.f, glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.f), glm::vec3(1.0f, 0.3f, 0.3f)); // point light source
+
+	scene->addSphere(0.2f, glm::vec3(-0.7f, -0.8f, 0.f), glm::vec3(0.8f, 0.3f, 0.1f), glm::vec3(0.f), 0.1f, 0.9f); // red sphere
+	scene->addSphere(0.2f, glm::vec3(0.7f, -0.8f, 0.f), glm::vec3(1.f), glm::vec3(0.f), 1.f); // white sphere
+	scene->addSphere(0.2f, glm::vec3(0.f, -0.8f, 0.f), glm::vec3(0.3f, 0.4f, 0.9f), glm::vec3(0.f), 0.4f, 0.6f); // blue sphere
+
+	camera->centerPosition = glm::vec3(0.f, 0.f, 3.f);
+	camera->yaw = 0.f;
+	camera->pitch = 0.05f;
+
+	return scene;
+}
+
+Scene *getCornellBoxSceneWithMultipleLights(InteractiveCamera *camera)
+{
+	Scene *scene = new Scene();
+
+	scene->addSphere(200.f, glm::vec3(201.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f)); // right wall
+	scene->addSphere(200.f, glm::vec3(-201.f, 0.f, 0.f), glm::vec3(1.f, 0.f, 0.f)); // left wall
+	scene->addSphere(200.f, glm::vec3(0.f, 0.f, -201.f), glm::vec3(1.f, 1.f, 1.f)); // back wall
+	scene->addSphere(200.f, glm::vec3(0.f, -201.f, 0.f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f, 0.f, 0.f), 0.4f, 0.6f); // floor
+	scene->addSphere(200.f, glm::vec3(0.f, 201.f, 0.f), glm::vec3(1.f, 1.f, 1.f)); // ceiling
+
+	scene->addSphere(1.f, glm::vec3(0.f, 1.8f, 0.f), glm::vec3(0.f), glm::vec3(0.75f)); // light source
+	scene->addSphere(0.f, glm::vec3(-0.8f, -0.75f, 0.5f), glm::vec3(0.f), glm::vec3(1.f, 0.3f, 0.3f)); // point light source
+	scene->addSphere(0.f, glm::vec3(0.7f, -0.5f, 0.5f), glm::vec3(0.f), glm::vec3(0.3f, 1.f, 0.3f)); // point light source
+	scene->addSphere(0.f, glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.f), glm::vec3(1.0f, 0.3f, 0.3f)); // point light source
 
 	scene->addSphere(0.2f, glm::vec3(-0.7f, -0.8f, 0.f), glm::vec3(0.8f, 0.3f, 0.1f), glm::vec3(0.f), 0.1f, 0.9f); // red sphere
 	scene->addSphere(0.2f, glm::vec3(0.7f, -0.8f, 0.f), glm::vec3(1.f), glm::vec3(0.f), 1.f); // white sphere
@@ -60,7 +109,7 @@ Scene *getUniverseScene(InteractiveCamera *camera)
 
 	scene->setBackgroundColor(0.f, 0.f, 0.f);
 
-	scene->addSphere(0.75f, glm::vec3(0.f), glm::vec3(0.f), glm::vec3(5.f)); // sun
+	scene->addSphere(0.75f, glm::vec3(0.f), glm::vec3(0.f), glm::vec3(10.f)); // sun
 
 	scene->addSphere(0.2f, glm::vec3(-1.1f, -0.1f, 0.1f), glm::vec3(0.8f, 0.4f, 0.3f)); // mercury
 	scene->addSphere(0.5f, glm::vec3(-2.f, -0.2f, 0.4f), glm::vec3(0.9f, 0.3f, 0.1f)); // venus
@@ -138,22 +187,28 @@ void showImGuiToolTip(ReferenceHolder *holder)
 		holder->tracer->setRenderOption(RANDOM);
 	}
 
-	const char *sceneNames[] = {"Cornell Box", "Universe"};
+	const char *sceneNames[] = {"Cornell Box Area Light", "Cornell Box Point Light", "Cornell Box (Mixed Lights)", "Universe"};
 	ImGui::Separator();
-	if (ImGui::ListBox("Scenes", &holder->currentSceneId, sceneNames, 2))
+	if (ImGui::ListBox("Scenes", &holder->currentSceneId, sceneNames, 4))
 	{
 		delete holder->scene;
 
 		switch (holder->currentSceneId)
 		{
 		case 0:
-			holder->scene = getCornellBoxScene(holder->camera);
+			holder->scene = getCornellBoxSceneSingleAreaLight(holder->camera);
 			break;
 		case 1:
+			holder->scene = getCornellBoxSceneSinglePointLight(holder->camera);
+			break;
+		case 2:
+			holder->scene = getCornellBoxSceneWithMultipleLights(holder->camera);
+			break;
+		case 3:
 			holder->scene = getUniverseScene(holder->camera);
 			break;
 		default:
-			holder->scene = getCornellBoxScene(holder->camera);
+			holder->scene = getCornellBoxSceneWithMultipleLights(holder->camera);
 			break;
 		}
 
@@ -226,7 +281,7 @@ int main(int, char **)
 	size_t localWorkSize[] = {16, 16};
 
 	auto *camera = new InteractiveCamera(width, height);
-	Scene *scene = getCornellBoxScene(camera);
+	Scene *scene = getCornellBoxSceneSingleAreaLight(camera);
 	scene->setCamera(camera);
 
 	Renderer renderer(width, height);

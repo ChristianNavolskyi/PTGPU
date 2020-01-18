@@ -288,13 +288,14 @@ Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, c
     float3 up = camera->up;
     float3 viewDirection = camera->view;
     int2 resolution = camera->resolution;
+    float aspectRatio = resolution.x / (float) resolution.y;
 
     float3 wVector = normalize(-viewDirection);
     float3 uVector = normalize(cross(up, wVector));
     float3 vVector = normalize(cross(wVector, uVector));
 
     // TODO fov -> aspect ratio
-    float horizontalFactor = tan(camera->fov.x * 0.5f * (M_PI_F / 180));
+    float horizontalFactor = tan(camera->fov.x * 0.5f * (M_PI_F / 180)) * aspectRatio;
     float verticalFactor = tan(camera->fov.y * -0.5f * (M_PI_F / 180));
 
     float3 middle = camOrigin + viewDirection;
@@ -442,7 +443,7 @@ float4 nextEventEstimation(Scene *scene, Intersection *intersection, float rand0
     return directLight;
 }
 
-__kernel void render(__global float4 *image, __constant Sphere *spheres, __constant LightSphere *lightSpheres, __constant Scene *sceneInfo, __constant Camera *camera, const int iteration, const float seed, const int options)
+__kernel void render(__global float4 *image, __constant Sphere *spheres, __constant LightSphere *lightSpheres, __constant Triangle *triangles, __constant LightTriangle *lightTriangles, __constant Scene *sceneInfo, __constant Camera *camera, const int iteration, const float seed, const int options)
 {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
@@ -452,14 +453,8 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
     Scene scene = *sceneInfo;
     scene.spheres = spheres;
     scene.lightSpheres = lightSpheres;
-//    scene.triangles = triangles;
-//    scene.lightTriangles = lightTriangles;
-//    scene.sphereCount = sceneInfo->sphereCount;
-//    scene.lightSphereCount = sceneInfo->lightSphereCount;
-//    scene.triangleCount = sceneInfo->triangleCount;
-//    scene.lightTriangleCount = sceneInfo->lightTriangleCount;
-//    scene.totalRadiance = sceneInfo->totalRadiance;
-//    scene.backgroundColor =
+    scene.triangles = triangles;
+    scene.lightTriangles = lightTriangles;
 
     int position = gy * width + gx;
 
@@ -468,15 +463,17 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
     float4 L = (float4)(0.f, 0.f, 0.f, 0.f);
     float4 brdfCosFactor = (float4) (1.f);
 
+    float randSeed = seed;
+
     for (int i = 0; i < N_BOUNCES; i++)
     {
         Intersection intersection;
 
         if (findIntersection(&ray, &intersection, &scene))
         {
-            float rand0 = random((gx + iteration) / (float)width, gy / (float)height, seed);
-            float rand1 = random(gx / (float)width, (gy + iteration) / (float)height, seed);
-            float rand2 = random(gx / (float)width, gy / (float)height, seed + iteration);
+            float rand0 = random((gx + iteration) / (float)width, gy / (float)height, randSeed);
+            float rand1 = random(gx / (float)width, (gy + iteration) / (float)height, randSeed);
+            float rand2 = random(gx / (float)width, gy / (float)height, randSeed + iteration);
 
             if (options != DEFAULT)
             {
@@ -494,12 +491,12 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
             L += directLight * brdfCosFactor;
 
             float3 newDirection;
-            float rand3 = random((gx + iteration) / (float) width, (gy + iteration) / (float) height, seed); // select which surface characteristic is used for the next ray direction
+            float rand3 = random((gx + iteration) / (float) width, (gy + iteration) / (float) height, randSeed); // select which surface characteristic is used for the next ray direction
             float3 selectedSphereCharacteristic = intersection.sphere->surfaceCharacteristic;
 
             if (rand3 < selectedSphereCharacteristic.x) { // diffuse reflection
-                float rand4 = random((gx + seed) / (float) width, (gy + iteration) / (float) height, seed);
-                float rand5 = random((gx + iteration) / (float) width, (gy + seed) / (float) height, seed);
+                float rand4 = random((gx + randSeed) / (float) width, (gy + iteration) / (float) height, randSeed);
+                float rand5 = random((gx + iteration) / (float) width, (gy + randSeed) / (float) height, randSeed);
                 float3 directionInHemisphere = sampleCosHemisphere(0.f, rand4, rand5);
 //                float directionPDF = sampleCosHemispherePDF(0.f, directionInHemisphere.z); // TODO check where to divide
 
@@ -515,6 +512,8 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
             ray.direction = newDirection;
 
             brdfCosFactor *= dot(intersection.normal, ray.direction);
+
+            randSeed = random(randSeed, position / (width), i + seed);
         }
         else
         {
