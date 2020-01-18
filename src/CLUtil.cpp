@@ -8,18 +8,37 @@ GPU Computing / GPGPU Praktikum source code.
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <OpenCL/cl.hpp>
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // CLUtil
 
-size_t CLUtil::GetGlobalWorkSize(size_t DataElemCount, size_t LocalWorkSize)
+cl::NDRange CLUtil::GetGlobalWorkSize(std::vector<size_t> dataElementCounts, cl::NDRange localWorkSize)
 {
-	size_t r = DataElemCount % LocalWorkSize;
-	if (r == 0)
-		return DataElemCount;
-	else
-		return DataElemCount + LocalWorkSize - r;
+	std::vector<size_t> globalWorkSizes;
+
+	for (int i = 0; i < dataElementCounts.size(); i++)
+	{
+
+		size_t r = dataElementCounts[i] % localWorkSize[i];
+		if (r == 0)
+			globalWorkSizes.push_back(dataElementCounts[i]);
+		else
+			globalWorkSizes.push_back(dataElementCounts[i] + localWorkSize[i] - r);
+	}
+
+	switch (globalWorkSizes.size())
+	{
+	case 1:
+		return cl::NDRange(globalWorkSizes[0]);
+	case 2:
+		return cl::NDRange(globalWorkSizes[0], globalWorkSizes[1]);
+	case 3:
+		return cl::NDRange(globalWorkSizes[0], globalWorkSizes[1], globalWorkSizes[2]);
+	default:
+		return cl::NDRange();
+	}
 }
 
 bool CLUtil::LoadProgramSourceToMemory(const std::string &Path, std::string &SourceCode)
@@ -52,7 +71,6 @@ cl_program CLUtil::BuildCLProgramFromMemory(cl_device_id Device, cl_context Cont
 	// This may be used later to pass flags and macro definitions to the OpenCL compiler
 
 	cl_program prog = nullptr;
-
 
 	std::string srcSolution = SourceCode;
 

@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <OpenCL/opencl.h>
+#include <OpenCL/cl.hpp>
 
 #include <string>
 #include <iostream>
@@ -29,7 +29,7 @@
 class CLUtil {
 public:
 	//! Determines the OpenCL global work size given the number of data elements and threads per workgroup
-	static size_t GetGlobalWorkSize(size_t DataElemCount, size_t LocalWorkSize);
+	static cl::NDRange GetGlobalWorkSize(std::vector<size_t> dataElementCounts, cl::NDRange localWorkSize);
 
 	//! Loads a program source to memory as a string
 	static bool LoadProgramSourceToMemory(const std::string &Path, std::string &SourceCode);
@@ -47,6 +47,7 @@ public:
 #define V_RETURN_MINUS_1_CL(expr, errmsg) do {cl_int e=(expr);if(CL_SUCCESS!=e){std::cerr<<"Error: "<<errmsg<<" ["<<CLUtil::GetCLErrorString(e)<<"]"<<std::endl; return -1; }} while(0)
 #define V_RETURN_NULL_CL(expr, errmsg) do {cl_int e=(expr);if(CL_SUCCESS!=e){std::cerr<<"Error: "<<errmsg<<" ["<<CLUtil::GetCLErrorString(e)<<"]"<<std::endl; return NULL; }} while(0)
 #define V_RETURN_CL(expr, errmsg) do {cl_int e=(expr);if(CL_SUCCESS!=e){std::cerr<<"Error: "<<errmsg<<" ["<<CLUtil::GetCLErrorString(e)<<"]"<<std::endl; return; }} while(0)
+#define V_EXIT_CL(expr, errmsg) do {cl_int e=(expr);if(CL_SUCCESS!=e){std::cerr<<"Error: "<<errmsg<<" ["<<CLUtil::GetCLErrorString(e)<<"]"<<std::endl; exit(-1); }} while(0)
 
 #define SAFE_DELETE(ptr) do {if(ptr){ delete ptr; ptr = NULL; }} while(0)
 #define SAFE_DELETE_ARRAY(x) do {if(x){delete [] x; x = NULL;}} while(0)

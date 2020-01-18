@@ -23,39 +23,71 @@ void Scene::setCamera(InteractiveCamera *camera)
 	this->camera = camera;
 }
 
-void Scene::addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance, float gEmittance, float bEmittance, float diffuse, float specular,
-					  float transmissive)
+#define float3(vec3) {{(vec3).x, (vec3).y, (vec3).z}}
+
+void Scene::addSphere(float radius, glm::vec3 position, glm::vec3 color, glm::vec3 emittance, float diffuse, float specular, float transmissive)
 {
 	glm::vec3 surfaceCharacteristic(diffuse, specular, transmissive);
 	surfaceCharacteristic = glm::normalize(surfaceCharacteristic);
 
-	glm::vec3 emittance(rEmittance, gEmittance, bEmittance);
-
 	Sphere sphere{};
 	sphere.radius = radius;
-	sphere.position = {{xPos, yPos, zPos}};
-	sphere.color = {{rColor, gColor, bColor, 1.f}};
-	sphere.emittance = {{emittance.x, emittance.y, emittance.z, 1.f}};
-	sphere.surfaceCharacteristic = {{surfaceCharacteristic.x, surfaceCharacteristic.y, surfaceCharacteristic.z}};
+	sphere.position = float3(position);
+	sphere.color = float3(color);
+	sphere.emittance = float3(emittance);
+	sphere.surfaceCharacteristic = float3(surfaceCharacteristic);
 
-	float totalEmittance;
+	float radiance;
 
-	if ((totalEmittance = glm::length(emittance)) > FLT_EPSILON)
+	if ((radiance = glm::length(emittance)) > FLT_EPSILON)
 	{
 		LightSphere lightSphere{};
 
-		lightSphere.radiance = totalEmittance;
+		lightSphere.radiance = radiance;
 		lightSphere.sphereId = spheres.size();
 
 		lightSpheres.push_back(lightSphere);
 
 		sceneInfo.lightSphereCount++;
-		sceneInfo.totalRadiance += totalEmittance;
+		sceneInfo.totalRadiance += radiance;
 	}
 
 	sceneInfo.sphereCount++;
 
 	spheres.push_back(sphere);
+}
+
+void Scene::addTriangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 color, glm::vec3 emittance, float diffuse, float specular, float transmissive)
+{
+	glm::vec3 surfaceCharacteristic(diffuse, specular, transmissive);
+	surfaceCharacteristic = glm::normalize(surfaceCharacteristic);
+
+	Triangle triangle{};
+	triangle.p1 = float3(p1);
+	triangle.p2 = float3(p2);
+	triangle.p3 = float3(p3);
+	triangle.color = float3(color);
+	triangle.emittance = float3(emittance);
+	triangle.surfaceCharacteristic = float3(surfaceCharacteristic);
+
+	float radiance;
+
+	if ((radiance = glm::length(emittance)) > FLT_EPSILON)
+	{
+		LightTriangle lightTriangle{};
+
+		lightTriangle.radiance = radiance;
+		lightTriangle.triangleId = triangles.size();
+
+		lightTriangles.push_back(lightTriangle);
+
+		sceneInfo.lightTriangleCount++;
+		sceneInfo.totalRadiance += radiance;
+	}
+
+	sceneInfo.triangleCount++;
+
+	triangles.push_back(triangle);
 }
 
 void Scene::setBackgroundColor(float r, float g, float b)
@@ -91,6 +123,27 @@ LightSphere *Scene::getLightSphereData()
 size_t Scene::getLightSphereSize()
 {
 	return sizeof(LightSphere) * lightSpheres.size();
+}
+
+
+Triangle *Scene::getTriangleData()
+{
+	return &triangles[0];
+}
+
+size_t Scene::getTriangleSize()
+{
+	return sizeof(Triangle) * triangles.size();
+}
+
+LightTriangle *Scene::getLightTriangleData()
+{
+	return &lightTriangles[0];
+}
+
+size_t Scene::getLightTriangleSize()
+{
+	return sizeof(LightTriangle) * lightTriangles.size();
 }
 
 SceneInfo *Scene::getSceneInfo()
@@ -177,3 +230,4 @@ void Scene::notifyListenerCameraChanged()
 		changeListener->notify();
 	}
 }
+

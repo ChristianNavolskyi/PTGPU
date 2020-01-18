@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <OpenCL/cl.h>
+#include <OpenCL/cl.hpp>
 #include "Scene.h"
 #include "InteractiveCamera.h"
 #include "RenderInfoListener.h"
@@ -26,28 +26,40 @@ enum RenderOption
 class CLTracer : public RenderInfoListener
 {
 private:
-	cl_device_id deviceId = nullptr;
-	cl_context context = nullptr;
-	cl_command_queue commandQueue = nullptr;
+	cl::Device device;
+	cl::Context context;
+	cl::CommandQueue commandQueue;
 
-	cl_kernel renderKernel = nullptr;
-	cl_program program = nullptr;
+	cl::Kernel renderKernel;
+	cl::Program program;
 
-	cl_mem image = nullptr;
-	cl_mem camera = nullptr;
-	cl_mem spheres = nullptr;
-	cl_mem lightSpheres = nullptr;
-	cl_mem sceneInfo = nullptr;
+	cl::BufferGL image;
+	cl::Buffer camera;
+	cl::Buffer spheres;
+	cl::Buffer lightSpheres;
+	cl::Buffer triangles;
+	cl::Buffer lightTriangles;
+	cl::Buffer sceneInfo;
 
 	GLuint textureTargetId = 0;
 
-	size_t localWorkSize[2] = {0, 0};
-	size_t globalWorkSize[2] = {0, 0};
+	cl::NDRange localWorkSize;
+	cl::NDRange globalWorkSize;
 
 	Scene *scene;
 	RenderOption option = DEFAULT;
 
+	static const cl_uint numIncludeFiles = 6;
+	std::string mainProgramName = "pathtracer.cl";
+	const char *includeNames[numIncludeFiles] = {"math.cl", "ray.cl", "scene.cl", "camera.cl", "spheres.cl", "triangles.cl"};
+
+//	static const cl_uint numIncludeFiles = 1;
+//	std::string mainProgramName = "main.cl";
+//	const char *includeNames[numIncludeFiles] = {"other.cl"};
+
+
 	long renderStartTime = -1;
+	std::vector<size_t> size;
 	int width = 0, height = 0;
 
 	void loadContext();
@@ -56,9 +68,9 @@ private:
 
 	void loadCommandQueue();
 
-	void loadProgram(const char *programPath);
+	void loadProgram(const std::string &kernelDirectory);
 
-	void loadKernel(cl_kernel *kernel, const char *kernelName);
+	void loadKernel(cl::Kernel kernel, const char *kernelName);
 
 	void setGlobalWorkSize();
 
@@ -66,12 +78,16 @@ private:
 
 	void updateRenderTarget();
 
+	cl::Buffer createValidBuffer(void *data, size_t size, cl_int *clError);
+
+	cl_int setValidKernelArg(cl_uint position, cl_mem data);
+
 public:
 	explicit CLTracer(Scene *scene, const size_t localWorkSize[2]);
 
-	~CLTracer();
+	~CLTracer() override = default;
 
-	bool init(const char *programPath, GLuint textureBufferId);
+	bool init(const std::string &kernelDir, GLuint textureBufferId);
 
 	void changeScene(Scene *scene);
 
