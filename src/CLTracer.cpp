@@ -177,23 +177,32 @@ void CLTracer::trace()
 	cl_int clError;
 
 	clError = clEnqueueAcquireGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to write data to OpenCL");
+	V_RETURN_CL(clError, "Failed to acquire buffer for OpenCL");
 
 	clError = clSetKernelArg(renderKernel, 0, sizeof(cl_mem), (void *) &image);
 	clError |= clSetKernelArg(renderKernel, 1, sizeof(cl_mem), (void *) &spheres);
 	clError |= clSetKernelArg(renderKernel, 2, sizeof(cl_mem), (void *) &lightSpheres);
+//	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &triangles);
+//	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_mem), (void *) &lightTriangles);
+//	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_mem), (void *) &sceneInfo);
+//	clError |= clSetKernelArg(renderKernel, 6, sizeof(cl_mem), (void *) &camera);
+//	clError |= clSetKernelArg(renderKernel, 7, sizeof(cl_int), (void *) &iteration);
+//	clError |= clSetKernelArg(renderKernel, 8, sizeof(cl_int), (void *) &randomNumberSeed);
+//	clError |= clSetKernelArg(renderKernel, 9, sizeof(cl_int), (void *) &option);
+
 	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &sceneInfo);
 	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_mem), (void *) &camera);
 	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_int), (void *) &iteration);
 	clError |= clSetKernelArg(renderKernel, 6, sizeof(cl_float), (void *) &randomNumberSeed);
 	clError |= clSetKernelArg(renderKernel, 7, sizeof(cl_int), (void *) &option);
+
 	V_RETURN_CL(clError, "Failed to set trace kernel arguments");
 
 	clError = clEnqueueNDRangeKernel(commandQueue, renderKernel, 2, nullptr, globalWorkSize, localWorkSize, 0, nullptr, nullptr);
 	V_RETURN_CL(clError, "Failed to enqueue trace kernel task");
 
 	clError = clEnqueueReleaseGLObjects(commandQueue, 1, &image, 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to release texture from OpenCL");
+	V_RETURN_CL(clError, "Failed to release buffer from OpenCL");
 
 	iteration++;
 	clFinish(commandQueue);
@@ -207,21 +216,34 @@ void CLTracer::updateScene()
 
 	SAFE_RELEASE_MEMOBJECT(spheres);
 	SAFE_RELEASE_MEMOBJECT(lightSpheres);
+	SAFE_RELEASE_MEMOBJECT(triangles);
+	SAFE_RELEASE_MEMOBJECT(lightTriangles);
 
-	spheres = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, scene->getSphereSize(), scene->getSphereData(), &clError);
-	lightSpheres = clCreateBuffer(context, CL_MEM_READ_ONLY, scene->getLightSphereSize(), nullptr, &clError);
-	auto lightData = scene->getLightSphereData();
-	if (lightData)
-	{
-		clError |= clEnqueueWriteBuffer(commandQueue, lightSpheres, CL_FALSE, 0, scene->getLightSphereSize(), lightData, 0, nullptr, nullptr);
-	}
-	clError |= clEnqueueWriteBuffer(commandQueue, sceneInfo, CL_FALSE, 0, sizeof(SceneInfo), scene->getSceneInfo(), 0, nullptr, nullptr);
-	V_RETURN_CL(clError, "Failed to initialize buffers for scene info");
+	spheres = createValidBuffer(scene->getSphereData(), scene->getSphereSize(), &clError);
+	lightSpheres = createValidBuffer(scene->getLightSphereData(), scene->getLightSphereSize(), &clError);
+//	triangles = createValidBuffer(scene->getTriangleData(), scene->getTriangleSize(), &clError);
+//	lightTriangles = createValidBuffer(scene->getLightTriangleData(), scene->getLightTriangleSize(), &clError);
+//	V_RETURN_CL(clError, "Failed to initialize buffers for scene description");
+
+	clError = clEnqueueWriteBuffer(commandQueue, sceneInfo, CL_FALSE, 0, sizeof(SceneInfo), scene->getSceneInfo(), 0, nullptr, nullptr);
+	V_RETURN_CL(clError, "Failed to write scene info");
 
 	clFinish(commandQueue);
 
 	glm::ivec2 resolution = scene->getResolution();
 	notifySizeChanged(resolution.x, resolution.y);
+}
+
+cl_mem CLTracer::createValidBuffer(void *data, size_t size, cl_int *clError)
+{
+	if (data)
+	{
+		return clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, size, data, clError);
+	}
+	else
+	{
+		return clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(void *), nullptr, clError);
+	}
 }
 
 void CLTracer::changeScene(Scene *scene)

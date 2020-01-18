@@ -84,6 +84,7 @@ float3 reflect(Ray *ray, float3 normal)
 }
 //************************************** RAY ******************************************************
 
+
 //************************************** SPHERES **************************************************
 //####################################  STRUCTS  ##################################################
 typedef struct
@@ -151,6 +152,7 @@ bool intersectSphere(Sphere *sphere, Ray *ray, float *t1, float *t2)
 }
 //************************************** SPHERES **************************************************
 
+
 //************************************** TRIANGLES ************************************************
 //####################################  STRUCTS  ##################################################
 typedef struct Triangle
@@ -174,8 +176,6 @@ bool intersectTriangle(Triangle *, Ray *ray, float *t1);
 
 //####################################  IMPLEMENTATIONS  ##########################################
 //************************************** TRIANGLES ************************************************
-
-
 
 
 //************************************** SCENE ****************************************************
@@ -322,13 +322,6 @@ Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, c
 //************************************** CAMERA ***************************************************
 
 
-
-
-
-
-
-
-
 //************************************** PATHTRACER ***********************************************
 //####################################  DEFINES  ##################################################
 #ifndef N_BOUNCES
@@ -346,9 +339,7 @@ Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, c
 
 //####################################  DECLARATIONS  #############################################
 float4 showDebugVision(Intersection *intersection, int options, float rand0, float rand1, float rand2);
-
 float4 nextEventEstimation(Scene *scene, Intersection *intersection, float rand0, float rand1, float rand2);
-
 
 //####################################  IMPLEMENTATIONS  ##########################################
 float4 showDebugVision(Intersection *intersection, int options, float rand0, float rand1, float rand2)
@@ -414,7 +405,6 @@ float4 nextEventEstimation(Scene *scene, Intersection *intersection, float rand0
     if (selectedLightSource->radius < EPSILON)
     { // point light source
         float3 vectorToPoint = selectedLightSource->position - intersection->position;
-
         lightRay.direction = normalize(vectorToPoint);
         distanceToPoint = length(vectorToPoint);
 
@@ -452,7 +442,7 @@ float4 nextEventEstimation(Scene *scene, Intersection *intersection, float rand0
     return directLight;
 }
 
-__kernel void render(__global float4 *image, __constant Sphere *spheres, __constant LightSphere *lightSpheres, __constant Triangle *triangles, __constant LightTriangle *lightTriangles, __constant Scene *sceneInfo, __constant Camera *camera, const int iteration, const float seed, const int options)
+__kernel void render(__global float4 *image, __constant Sphere *spheres, __constant LightSphere *lightSpheres, __constant Scene *sceneInfo, __constant Camera *camera, const int iteration, const float seed, const int options)
 {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
@@ -460,6 +450,16 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
     int height = camera->resolution.y;
 
     Scene scene = *sceneInfo;
+    scene.spheres = spheres;
+    scene.lightSpheres = lightSpheres;
+//    scene.triangles = triangles;
+//    scene.lightTriangles = lightTriangles;
+//    scene.sphereCount = sceneInfo->sphereCount;
+//    scene.lightSphereCount = sceneInfo->lightSphereCount;
+//    scene.triangleCount = sceneInfo->triangleCount;
+//    scene.lightTriangleCount = sceneInfo->lightTriangleCount;
+//    scene.totalRadiance = sceneInfo->totalRadiance;
+//    scene.backgroundColor =
 
     int position = gy * width + gx;
 

@@ -18,7 +18,7 @@ typedef struct Sphere
 	cl_float dummy2;
 	cl_float3 position;
 	cl_float3 color;
-	cl_float4 emittance;
+	cl_float3 emittance;
 	cl_float3 surfaceCharacteristic;
 } Sphere;
 
@@ -28,10 +28,26 @@ typedef struct LightSphere
 	cl_int radiance;
 } LightSphere;
 
+typedef struct Triangle
+{
+	cl_float3 p1, p2, p3;
+	cl_float3 color;
+	cl_float3 emittance;
+	cl_float3 surfaceCharacteristic;
+};
+
+typedef struct LightTriangle
+{
+	cl_int triangleId;
+	cl_int radiance;
+};
+
 typedef struct SceneInfo
 {
 	cl_int sphereCount;
 	cl_int lightSphereCount;
+	cl_int triangleCount;
+	cl_int lightTriangleCount;
 	cl_int totalRadiance;
 	cl_float3 backgroundColor;
 } SceneInfo;
@@ -46,6 +62,10 @@ class Scene
 private:
 	std::vector<Sphere> spheres;
 	std::vector<LightSphere> lightSpheres;
+
+	std::vector<Triangle> triangles;
+	std::vector<LightTriangle> lightTriangles;
+
 	SceneInfo sceneInfo;
 
 	RenderInfoListener *changeListener = nullptr;
@@ -63,22 +83,29 @@ public:
 
 	void setCamera(InteractiveCamera *camera);
 
-	void
-	addSphere(float xPos, float yPos, float zPos, float radius, float rColor, float gColor, float bColor, float rEmittance = 0.f, float gEmittance = 0.f, float bEmittance = 0.f, float diffuse = 1.f,
-			  float specular = 0.f,
-			  float transmissive = 0.f);
+	void addSphere(float radius, glm::vec3 position, glm::vec3 color, glm::vec3 emittance = glm::vec3(0.f), float diffuse = 1.f, float specular = 0.f, float transmissive = 0.f);
+
+	void addTriangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, glm::vec3 color, glm::vec3 emittance = glm::vec3(0.f), float diffuse = 1.f, float specular = 0.f, float transmissive = 0.f);
 
 	void setBackgroundColor(float r, float g, float b);
 
 	void linkUpdateListener(RenderInfoListener *listener);
 
+	Sphere *getSphereData();
+
 	size_t getSphereSize();
 
-	Sphere *getSphereData();
+	LightSphere *getLightSphereData();
 
 	size_t getLightSphereSize();
 
-	LightSphere *getLightSphereData();
+	Triangle *getTriangleData();
+
+	size_t getTriangleSize();
+
+	LightTriangle *getLightTriangleData();
+
+	size_t getLightTriangleSize();
 
 	SceneInfo *getSceneInfo();
 

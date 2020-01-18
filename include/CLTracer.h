@@ -37,6 +37,8 @@ private:
 	cl_mem camera = nullptr;
 	cl_mem spheres = nullptr;
 	cl_mem lightSpheres = nullptr;
+	cl_mem triangles = nullptr;
+	cl_mem lightTriangles = nullptr;
 	cl_mem sceneInfo = nullptr;
 
 	GLuint textureTargetId = 0;
@@ -65,6 +67,8 @@ private:
 	void updateScene();
 
 	void updateRenderTarget();
+
+	cl_mem createValidBuffer(void *data, size_t size, cl_int *clError);
 
 public:
 	explicit CLTracer(Scene *scene, const size_t localWorkSize[2]);
