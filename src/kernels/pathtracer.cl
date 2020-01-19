@@ -206,8 +206,8 @@ float3 getTriangleNormal(__constant Triangle *triangle, Ray *ray)
     float3 e1 = triangle->p2 - triangle->p1;
     float3 e2 = triangle->p3 - triangle->p1;
 
-    float3 normal = cross(e1, e2);
-    return dot(ray->direction, normal) < 0 ? -normal : normal;
+    float3 normal = normalize(cross(e1, e2));
+    return dot(ray->direction, normal) < 0 ? normal : -normal;
 }
 //************************************** TRIANGLES ************************************************
 
@@ -432,7 +432,7 @@ float3 showDebugVision(Intersection *intersection, int options, float rand0, flo
 {
     if (options == NORMAL)
     {
-        return (intersection->normal + (float3)(1.f)) / 2.f;
+        return (intersection->normal + (float3)(1.f)) * 0.5f;
     }
     else if (options == DEPTH)
     {
@@ -464,11 +464,11 @@ float3 showDebugVision(Intersection *intersection, int options, float rand0, flo
     {
         if (intersection->objectType == SPHERE)
         {
-            return (float3) intersection->sphereId / 10.f;
+            return (float3) intersection->sphereId / 15.f;
         }
         else if (intersection->objectType == TRIANGLE)
         {
-            return (float3) intersection->triangleId / 10.f;
+            return (float3) intersection->triangleId / 15.f;
         }
     }
     else if (options == RANDOM)
