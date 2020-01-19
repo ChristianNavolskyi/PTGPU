@@ -672,9 +672,8 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
                 newDirection = transformIntoTangentSpace(intersection.normal, directionInHemisphere);
             } else if (rand3 < selectedSurfaceCharacteristic.x + selectedSurfaceCharacteristic.y) { // specular reflection
                 newDirection = reflect(&ray, intersection.normal);
-            } else { // transmission
-            // Fresnel / Snellsches Brechungsgesetz
-
+            } else {
+                break;
             }
 
             ray.origin = intersection.position + intersection.normal * EPSILON;

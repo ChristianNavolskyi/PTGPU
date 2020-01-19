@@ -145,10 +145,14 @@ Scene *getVeachScene(InteractiveCamera *camera)
 
 	scene->addPlane(glm::vec3(-5.f, 5.f, 1.f), glm::vec3(5.f, 5.f, 1.f), glm::vec3(-5.f, -5.f, 1.f), glm::vec3(5.f, -5.f, 1.f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.2f)); // back wall
 
-	scene->addPlane(glm::vec3(-1.f, -0.7f, -0.8f), glm::vec3(1.f, -0.7f, -0.8f), glm::vec3(-1.f, -0.8f, -1.f), glm::vec3(1.f, -0.8f, -1.f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), 1.f, 0.f); // first front
-	scene->addPlane(glm::vec3(-1.f, -0.5f, -0.5f), glm::vec3(1.f, -0.5f, -0.5f), glm::vec3(-1.f, -0.625f, -0.7f), glm::vec3(1.f, -0.625f, -0.7f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), 0.66f, 0.33f); // second
-	scene->addPlane(glm::vec3(-1.f, -0.2f, -0.2f), glm::vec3(1.f, -0.2f, -0.2f), glm::vec3(-1.f, -0.36f, -0.4f), glm::vec3(1.f, -0.36f, -0.4f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), 0.33f, 0.66f); // third
-	scene->addPlane(glm::vec3(-1.f, 0.1f, 0.1f), glm::vec3(1.f, 0.1f, 0.1f), glm::vec3(-1.f, -0.115f, -0.1f), glm::vec3(1.f, -0.115f, -0.1f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), 0.f, 1.f); // fourth back
+	scene->addPlane(glm::vec3(-1.f, -0.7f, -0.8f), glm::vec3(1.f, -0.7f, -0.8f), glm::vec3(-1.f, -0.8f, -1.f), glm::vec3(1.f, -0.8f, -1.f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), 1.f,
+					0.f); // first front
+	scene->addPlane(glm::vec3(-1.f, -0.5f, -0.5f), glm::vec3(1.f, -0.5f, -0.5f), glm::vec3(-1.f, -0.625f, -0.7f), glm::vec3(1.f, -0.625f, -0.7f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), 0.66f,
+					0.33f); // second
+	scene->addPlane(glm::vec3(-1.f, -0.2f, -0.2f), glm::vec3(1.f, -0.2f, -0.2f), glm::vec3(-1.f, -0.36f, -0.4f), glm::vec3(1.f, -0.36f, -0.4f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), 0.33f,
+					0.66f); // third
+	scene->addPlane(glm::vec3(-1.f, 0.1f, 0.1f), glm::vec3(1.f, 0.1f, 0.1f), glm::vec3(-1.f, -0.115f, -0.1f), glm::vec3(1.f, -0.115f, -0.1f), glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), 0.f,
+					1.f); // fourth back
 
 	scene->addSphere(0.01f, glm::vec3(-1.f, 1.f, 0.1f), glm::vec3(0.f), glm::vec3(1.f, 0.4f, 0.4f));
 	scene->addSphere(0.05f, glm::vec3(-0.333f, 1.f, 0.1f), glm::vec3(0.f), glm::vec3(0.8f, 0.5f, 0.5f));
