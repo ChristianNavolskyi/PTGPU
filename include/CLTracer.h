@@ -16,7 +16,7 @@ enum RenderOption
 	DEPTH = 2,
 	COLOR = 3,
 	EMITTANCE = 4,
-	SPHERE_ID = 5,
+	OBJECT_ID = 5,
 	RANDOM = 6
 };
 

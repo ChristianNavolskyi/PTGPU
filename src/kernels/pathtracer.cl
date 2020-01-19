@@ -169,11 +169,11 @@ typedef struct LightTriangle
 
 
 //####################################  DECLARATIONS  #############################################
-bool intersectTriangle(__constant Triangle *triangle, Ray *ray, float *t1);
+bool intersectTriangle(__constant Triangle *triangle, Ray *ray, float *t);
 float3 getTriangleNormal(__constant Triangle *triangle, Ray *ray);
 
 //####################################  IMPLEMENTATIONS  ##########################################
-bool intersectTriangle(__constant Triangle *triangle, Ray *ray, float *t1)
+bool intersectTriangle(__constant Triangle *triangle, Ray *ray, float *t)
 {
     float3 e1 = triangle->p2 - triangle->p1;
     float3 e2 = triangle->p3 - triangle->p1;
@@ -197,12 +197,7 @@ bool intersectTriangle(__constant Triangle *triangle, Ray *ray, float *t1)
         return false;
 
     // Compute _t_ to intersection point
-    float t = dot(e2, s2) * invDivisor;
-    if (t < -EPSILON || t > 1.f + EPSILON)
-        return false;
-
-    // Store the closest found intersection so far
-    *t1 = t;
+    *t = dot(e2, s2) * invDivisor;
     return true;
 }
 
@@ -212,7 +207,7 @@ float3 getTriangleNormal(__constant Triangle *triangle, Ray *ray)
     float3 e2 = triangle->p3 - triangle->p1;
 
     float3 normal = cross(e1, e2);
-    return dot(ray->direction, normal) < 0 ? normal : -normal;
+    return dot(ray->direction, normal) < 0 ? -normal : normal;
 }
 //************************************** TRIANGLES ************************************************
 
@@ -259,7 +254,9 @@ typedef struct
 
 //####################################  DECLARATIONS  #############################################
 bool findIntersection(Ray *ray, Intersection *intersection, Scene *scene);
-
+float3 getObjectColor(Intersection *intersection);
+float3 getObjectEmittance(Intersection *intersection);
+float3 getObjectSurfaceCharacteristic(Intersection *intersection);
 
 //####################################  IMPLEMENTATIONS  ##########################################
 bool findIntersection(Ray *ray, Intersection *intersection, Scene *scene)
@@ -316,6 +313,39 @@ bool findIntersection(Ray *ray, Intersection *intersection, Scene *scene)
         return true;
     } else {
         return false;
+    }
+}
+
+float3 getObjectColor(Intersection *intersection) {
+    switch(intersection->objectType) {
+    case SPHERE:
+        return intersection->sphere->color;
+    case TRIANGLE:
+        return intersection->triangle->color;
+    default:
+        return (float3) 0.f;
+    }
+}
+
+float3 getObjectEmittance(Intersection *intersection) {
+    switch(intersection->objectType) {
+    case SPHERE:
+        return intersection->sphere->emittance;
+    case TRIANGLE:
+        return intersection->triangle->emittance;
+    default:
+        return (float3) 0.f;
+    }
+}
+
+float3 getObjectSurfaceCharacteristic(Intersection *intersection) {
+    switch(intersection->objectType) {
+    case SPHERE:
+        return intersection->sphere->surfaceCharacteristic;
+    case TRIANGLE:
+        return intersection->triangle->surfaceCharacteristic;
+    default:
+        return (float3) 0.f;
     }
 }
 //************************************** SCENE ****************************************************
@@ -547,17 +577,9 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
 
         if (findIntersection(&ray, &intersection, &scene))
         {
-
-            if (intersection.objectType == TRIANGLE)
-            {
-                L = (float3) (1.f, 0.f, 0.f);
-                break;
-            }
-
-
-            float rand0 = random((gx + iteration) / (float)width, gy / (float)height, randSeed);
-            float rand1 = random(gx / (float)width, (gy + iteration) / (float)height, randSeed);
-            float rand2 = random(gx / (float)width, gy / (float)height, randSeed + iteration);
+            float rand0 = random((gx + iteration) / (float) width, gy / (float) height, randSeed);
+            float rand1 = random(gx / (float) width, (gy + iteration) / (float) height, randSeed);
+            float rand2 = random(gx / (float) width, gy / (float) height, randSeed + iteration);
 
             if (options != DEFAULT)
             {
@@ -566,38 +588,17 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
                 break;
             }
 
-            float3 emittedLight;
-
-            if (intersection.objectType == SPHERE)
-            {
-                emittedLight = intersection.sphere->emittance;
-            }
-            else if (intersection.objectType == TRIANGLE)
-            {
-                emittedLight = intersection.triangle->emittance;
-            }
-
+            float3 emittedLight = getObjectEmittance(&intersection);
             L += emittedLight * brdfCosFactor;
-            break;
 
-            brdfCosFactor *= intersection.sphere->color;
+            brdfCosFactor *= getObjectColor(&intersection);
 
             float3 directLight = nextEventEstimation(&scene, &intersection, rand0, rand1, rand2);
             L += directLight * brdfCosFactor;
 
             float3 newDirection;
             float rand3 = random((gx + iteration) / (float) width, (gy + iteration) / (float) height, randSeed); // select which surface characteristic is used for the next ray direction
-            float3 selectedSurfaceCharacteristic;
-
-            if (intersection.objectType == SPHERE)
-            {
-                selectedSurfaceCharacteristic = intersection.sphere->surfaceCharacteristic;
-            }
-            else if (intersection.objectType == TRIANGLE)
-            {
-                selectedSurfaceCharacteristic = intersection.triangle->surfaceCharacteristic;
-            }
-
+            float3 selectedSurfaceCharacteristic = getObjectSurfaceCharacteristic(&intersection);
 
             if (rand3 < selectedSurfaceCharacteristic.x) { // diffuse reflection
                 float rand4 = random((gx + randSeed) / (float) width, (gy + iteration) / (float) height, randSeed);
