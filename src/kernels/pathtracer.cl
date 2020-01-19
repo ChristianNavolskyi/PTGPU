@@ -171,6 +171,8 @@ typedef struct LightTriangle
 //####################################  DECLARATIONS  #############################################
 bool intersectTriangle(__constant Triangle *triangle, Ray *ray, float *t);
 float3 getTriangleNormal(__constant Triangle *triangle, Ray *ray);
+float getTriangleArea(__constant Triangle *triangle);
+float3 sampleUniformPointOnTriangle(__constant Triangle *triangle, float rand0, float rand1);
 
 //####################################  IMPLEMENTATIONS  ##########################################
 bool intersectTriangle(__constant Triangle *triangle, Ray *ray, float *t)
@@ -197,7 +199,12 @@ bool intersectTriangle(__constant Triangle *triangle, Ray *ray, float *t)
         return false;
 
     // Compute _t_ to intersection point
-    *t = dot(e2, s2) * invDivisor;
+    float t1 = dot(e2, s2) * invDivisor;
+    if (t1 < -EPSILON)
+        return false;
+
+    // Store the closest found intersection so far
+    *t = t1;
     return true;
 }
 
@@ -208,6 +215,24 @@ float3 getTriangleNormal(__constant Triangle *triangle, Ray *ray)
 
     float3 normal = normalize(cross(e1, e2));
     return dot(ray->direction, normal) < 0 ? normal : -normal;
+}
+
+float getTriangleArea(__constant Triangle *triangle)
+{
+    // Formula from https://math.stackexchange.com/a/128999/630882
+    float3 e1 = triangle->p2 - triangle->p1;
+    float3 e2 = triangle->p3 - triangle->p1;
+
+    return 0.5f * length(cross(e1, e2));
+}
+
+float3 sampleUniformPointOnTriangle(__constant Triangle *triangle, float rand0, float rand1)
+{
+    // Formula from Photorealistic Image Synthesis
+    float s = 1 - sqrt(1 - rand0);
+    float t = (1 - s) * rand1;
+
+    return triangle->p1 + s * (triangle->p2 - triangle->p1) + t * (triangle->p3 - triangle->p1);
 }
 //************************************** TRIANGLES ************************************************
 
@@ -420,7 +445,8 @@ Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, c
 #define COLOR 3
 #define EMITTANCE 4
 #define OBJECT_ID 5
-#define RANDOM 6
+#define SURFACE_CHARACTERISTIC 6
+#define RANDOM 7
 
 
 //####################################  DECLARATIONS  #############################################
@@ -440,25 +466,11 @@ float3 showDebugVision(Intersection *intersection, int options, float rand0, flo
     }
     else if (options == COLOR)
     {
-        if (intersection->objectType == SPHERE)
-        {
-            return intersection->sphere->color;
-        }
-        else if (intersection->objectType == TRIANGLE)
-        {
-            return intersection->triangle->color;
-        }
+        return getObjectColor(intersection);
     }
     else if (options == EMITTANCE)
     {
-        if (intersection->objectType == SPHERE)
-        {
-            return intersection->sphere->emittance;
-        }
-        else if (intersection->objectType == TRIANGLE)
-        {
-            return intersection->triangle->emittance;
-        }
+        return getObjectEmittance(intersection);
     }
     else if (options == OBJECT_ID)
     {
@@ -470,6 +482,10 @@ float3 showDebugVision(Intersection *intersection, int options, float rand0, flo
         {
             return (float3) intersection->triangleId / 15.f;
         }
+    }
+    else if (options == SURFACE_CHARACTERISTIC)
+    {
+        return (getObjectSurfaceCharacteristic(intersection) + 1.f) * 0.5f;
     }
     else if (options == RANDOM)
     {
@@ -484,8 +500,10 @@ float3 nextEventEstimation(Scene *scene, Intersection *intersection, float rand0
     float3 directLight = (float3) 1.f;
 
     float lightSelector = rand0;
-    __constant Sphere *selectedLightSource;
-    int selectedLightSourceId;
+    __constant Sphere *selectedLightSphere;
+    __constant Triangle *selectedLightTriangle;
+    int selectedLightObjectType;
+    int selectedLightId = -1;
 
     float radianceContribution = 0.f;
 
@@ -497,53 +515,98 @@ float3 nextEventEstimation(Scene *scene, Intersection *intersection, float rand0
 
         if (lightSelector < radianceContribution)
         {
-            selectedLightSourceId = currentLightSphere->sphereId;
-            selectedLightSource = &scene->spheres[selectedLightSourceId];
+            selectedLightId = currentLightSphere->sphereId;
+            selectedLightSphere = &scene->spheres[selectedLightId];
+            selectedLightObjectType = SPHERE;
             directLight /= currentRadianceContribution;
             break;
         }
     }
 
-    float3 directionToLight = normalize(selectedLightSource->position - intersection->position);
-    float distanceToPoint = INFINITY;
+    if (selectedLightId == -1) {
+        for (int i = 0; i < scene->lightTriangleCount; i++)
+        {
+            __constant LightTriangle *currentLightTriangle = &scene->lightTriangles[i];
+            float currentRadianceContribution = currentLightTriangle->radiance / scene->totalRadiance;
+            radianceContribution += currentRadianceContribution;
 
-    Ray lightRay;
-
-    if (selectedLightSource->radius < EPSILON)
-    { // point light source
-        float3 vectorToPoint = selectedLightSource->position - intersection->position;
-        lightRay.direction = normalize(vectorToPoint);
-        distanceToPoint = length(vectorToPoint);
-
-        directLight /= (4 * M_PI_F); // radiance contribution of point into one direction
-        directLight /= pow(distanceToPoint, 2.f); // distance falloff
-        directLight *= dot(intersection->normal, directionToLight); // cos theta
+            if (lightSelector < radianceContribution)
+            {
+                selectedLightId = currentLightTriangle->triangleId;
+                selectedLightTriangle = &scene->triangles[selectedLightId];
+                selectedLightObjectType = TRIANGLE;
+                directLight /= currentRadianceContribution;
+                break;
+            }
+        }
     }
-    else
+
+    if (selectedLightObjectType == SPHERE)
     {
-        float3 hemisphereSample = sampleCosHemisphere(0.f, rand1, rand2);
-        float3 pointOnLightSphere = selectedLightSource->position + transformIntoTangentSpace(-directionToLight, hemisphereSample) * selectedLightSource->radius;
+        float3 directionToLight = normalize(selectedLightSphere->position - intersection->position);
+        float distanceToPoint = INFINITY;
 
-        lightRay.direction = normalize(pointOnLightSphere - intersection->position);
+        Ray lightRay;
 
-        float3 normalAtLightPoint = normalize(pointOnLightSphere - selectedLightSource->position);
+        if (selectedLightSphere->radius < EPSILON)
+        { // point light source
+            float3 vectorToPoint = selectedLightSphere->position - intersection->position;
+            lightRay.direction = normalize(vectorToPoint);
+            distanceToPoint = length(vectorToPoint);
 
-        directLight /= 2 * M_PI_F * pow(selectedLightSource->radius, 2.f); // pdf - surface area half
-        directLight /= pow(length(intersection->position - pointOnLightSphere), 2.f); // distance falloff
-        directLight *= dot(intersection->normal, lightRay.direction) * dot(normalAtLightPoint, -lightRay.direction); // cos theta i and j
+            directLight /= (4 * M_PI_F); // radiance contribution of point into one direction
+            directLight /= pow(distanceToPoint, 2.f); // distance falloff
+            directLight *= dot(intersection->normal, directionToLight); // cos theta
+        }
+        else
+        {
+            float3 hemisphereSample = sampleCosHemisphere(0.f, rand1, rand2);
+            float3 pointOnLightSphere = selectedLightSphere->position + transformIntoTangentSpace(-directionToLight, hemisphereSample) * selectedLightSphere->radius;
+
+            lightRay.direction = normalize(pointOnLightSphere - intersection->position);
+
+            float3 normalAtLightPoint = normalize(pointOnLightSphere - selectedLightSphere->position);
+
+            directLight /= 2 * M_PI_F * pow(selectedLightSphere->radius, 2.f); // pdf - surface area half
+            directLight /= pow(length(intersection->position - pointOnLightSphere), 2.f); // distance falloff
+            directLight *= dot(intersection->normal, lightRay.direction) * dot(normalAtLightPoint, -lightRay.direction); // cos theta i and j
+        }
+
+        lightRay.origin = intersection->position + intersection->normal * EPSILON;
+
+        Intersection lightIntersection;
+
+        if ((findIntersection(&lightRay, &lightIntersection, scene) && lightIntersection.objectType == SPHERE && lightIntersection.sphereId == selectedLightId) || distanceToPoint < lightIntersection.t)
+        { // first intersection is with selected light source
+            directLight *= selectedLightSphere->emittance;
+        }
+        else
+        {
+            directLight = 0.f;
+        }
     }
-
-    lightRay.origin = intersection->position + intersection->normal * EPSILON;
-
-    Intersection lightIntersection;
-
-    if ((findIntersection(&lightRay, &lightIntersection, scene) && lightIntersection.sphereId == selectedLightSourceId) || distanceToPoint < lightIntersection.t)
-    { // first intersection is with selected light source
-        directLight *= selectedLightSource->emittance;
-    }
-    else
+    else if (selectedLightObjectType == TRIANGLE)
     {
-        directLight = 0.f;
+        float3 pointOnTriangle = sampleUniformPointOnTriangle(selectedLightTriangle, rand1, rand2);
+        float triangleArea = getTriangleArea(selectedLightTriangle);
+
+        Ray lightRay;
+        lightRay.origin = intersection->position + intersection->normal * EPSILON;
+        lightRay.direction = normalize(pointOnTriangle - intersection->position);
+
+        Intersection lightIntersection;
+
+        if (findIntersection(&lightRay, &lightIntersection, scene) && lightIntersection.objectType == TRIANGLE && lightIntersection.triangleId == selectedLightId)
+        {
+            directLight /= triangleArea; // pdf for point on triangle
+            directLight /= pow(length(pointOnTriangle - intersection->position), 2); // distance falloff
+            directLight *= dot(intersection->normal, lightRay.direction); // cos
+            directLight *= selectedLightTriangle->emittance; // Le
+        }
+        else
+        {
+            directLight = 0.f;
+        }
     }
 
     return directLight;

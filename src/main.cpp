@@ -220,6 +220,11 @@ void showImGuiToolTip(ReferenceHolder *holder)
 		holder->tracer->setRenderOption(OBJECT_ID);
 	}
 	ImGui::SameLine();
+	if (ImGui::Button("Surface Characteristic"))
+	{
+		holder->tracer->setRenderOption(SURFACE_CHARACTERISTIC);
+	}
+	ImGui::SameLine();
 	if (ImGui::Button("Random Numbers"))
 	{
 		holder->tracer->setRenderOption(RANDOM);

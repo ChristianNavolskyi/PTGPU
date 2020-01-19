@@ -17,7 +17,8 @@ enum RenderOption
 	COLOR = 3,
 	EMITTANCE = 4,
 	OBJECT_ID = 5,
-	RANDOM = 6
+	SURFACE_CHARACTERISTIC = 6,
+	RANDOM = 7
 };
 
 /**
