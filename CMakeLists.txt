@@ -7,11 +7,9 @@ find_package(GLEW REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(OpenCL REQUIRED)
 
-find_package(GLUT)
-
 add_subdirectory(ext/imgui)
 
-set(LIBRARIES ${GLUT_LIBRARY} glfw GLEW::glew imgui ${OpenCL_LIBRARIES})
+set(LIBRARIES glfw GLEW::glew imgui ${OpenCL_LIBRARIES})
 
 set(SOURCE_FILES
         # Header files
@@ -26,7 +24,6 @@ set(SOURCE_FILES
         src/main.cpp
         src/CLTracer.cpp
         src/Renderer.cpp
-        src/apple.c
         src/CLUtil.cpp
         src/Scene.cpp
         src/InteractiveCamera.cpp)
