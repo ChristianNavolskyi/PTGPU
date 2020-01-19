@@ -1,7 +1,3 @@
-//
-// Created by Christian Navolskyi on 08.01.20.
-//
-
 #include "InteractiveCamera.h"
 #include <algorithm>
 

@@ -1,7 +1,3 @@
-//
-// Created by Christian Navolskyi on 07.01.20.
-//
-
 #include "Scene.h"
 #include "CLUtil.h"
 

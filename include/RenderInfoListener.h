@@ -1,7 +1,3 @@
-//
-// Created by Melina Christian Navolskyi on 08.01.20.
-//
-
 #pragma once
 
 

@@ -334,7 +334,7 @@ int main(int, char **)
 	size_t localWorkSize[] = {16, 16};
 
 	auto *camera = new InteractiveCamera(width, height);
-	Scene *scene = getVeachScene(camera);
+	Scene *scene = getCornellBoxSceneSingleAreaLight(camera);
 	scene->setCamera(camera);
 
 	Renderer renderer(width, height);

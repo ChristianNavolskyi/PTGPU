@@ -1,7 +1,3 @@
-//
-// Created by Christian Navolskyi on 04.01.20.
-//
-
 #pragma once
 
 #include <OpenCL/cl.h>

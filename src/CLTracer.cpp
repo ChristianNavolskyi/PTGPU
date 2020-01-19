@@ -1,7 +1,3 @@
-//
-// Created by Christian Navolskyi on 04.01.20.
-//
-
 #include <vector>
 #include <iostream>
 #include <chrono>

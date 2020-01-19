@@ -1,7 +1,3 @@
-//
-// Created by Christian Navolskyi on 05.01.20.
-//
-
 #pragma once
 
 class Renderer
