@@ -4,17 +4,31 @@
 
 //####################################  DECLARATIONS  #############################################
 void createOrthonormalAxes(float3 z, float3 *x, float3 *y);
-float random(float x, float y, float z);
+uint wangHash(uint seed);
+float random(uint *seed);
 float3 sampleCosHemisphere(float exp, float rand1, float rand2);
 float sampleCosHemispherePDF(float exp, float cosTheta);
 float3 transformIntoWorldSpace(float3 w, float3 direction);
 float3 transformIntoTangentSpace(float3 w, float3 direction);
 
 //####################################  IMPLEMENTATIONS  ##########################################
-float random(float x, float y, float z)
+float random(uint *seed)
 {
-    float ptr = 0.0f;
-    return fract(sin(x * 112.9898f + y * 179.233f + z * 237.212f) * 43758.5453f, &ptr);
+    *seed ^= (*seed << 13);
+    *seed ^= (*seed >> 17);
+    *seed ^= (*seed << 5);
+
+    return *seed / ((float) 0xFFFFFFFF);
+}
+
+uint wangHash(uint seed)
+{
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return seed;
 }
 
 float3 sampleCosHemisphere(float exp, float rand1, float rand2)
@@ -387,10 +401,10 @@ typedef struct
 } Camera;
 
 //####################################  DECLARATIONS  #############################################
-Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, const float seed);
+Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, int *seed);
 
 //####################################  IMPLEMENTATIONS  ##########################################
-Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, const float seed)
+Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, int *seed)
 {
     float3 camOrigin = camera->position;
     float3 up = camera->up;
@@ -413,8 +427,8 @@ Ray getCameraRay(__constant Camera *camera, int x, int y, const int iteration, c
     int yPixel = resolution.y - y - 1;
 
     // pixel offset for anti-aliasing
-    float randX = random((x + 7.5f) * 1000.f / 3.f, (float)iteration, seed);
-    float randY = random((y + 2.5f) * 1000.f / 3.f, (float)iteration, seed);
+    float randX = random(seed);
+    float randY = random(seed);
 
     float sx = (float)(xPixel + randX - 0.5f) / ((float)resolution.x - 1.f);
     float sy = (float)(yPixel + randY - 0.5f) / ((float)resolution.y - 1.f);
@@ -608,7 +622,7 @@ float3 nextEventEstimation(Scene *scene, Intersection *intersection, float rand0
     return directLight;
 }
 
-__kernel void render(__global float4 *image, __constant Sphere *spheres, __constant LightSphere *lightSpheres, __constant Triangle *triangles, __constant LightTriangle *lightTriangles, __constant Scene *sceneInfo, __constant Camera *camera, const int iteration, const float seed, const int options)
+__kernel void render(__global float4 *image, __constant Sphere *spheres, __constant LightSphere *lightSpheres, __constant Triangle *triangles, __constant LightTriangle *lightTriangles, __constant Scene *sceneInfo, __constant Camera *camera, const int iteration, const uint seed, const int options)
 {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
@@ -622,13 +636,12 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
     scene.lightTriangles = lightTriangles;
 
     int position = gy * width + gx;
+    int randSeed = wangHash(seed + position);
 
-    Ray ray = getCameraRay(camera, gx, gy, iteration, seed);
+    Ray ray = getCameraRay(camera, gx, gy, iteration, &randSeed);
 
     float3 L = (float3)(0.f);
     float3 brdfCosFactor = (float3)(1.f);
-
-    float randSeed = seed;
 
     for (int i = 0; i < N_BOUNCES; i++)
     {
@@ -636,9 +649,9 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
 
         if (findIntersection(&ray, &intersection, &scene))
         {
-            float rand0 = random((gx + iteration) / (float)width, gy / (float)height, randSeed);
-            float rand1 = random(gx / (float)width, (gy + iteration) / (float)height, randSeed);
-            float rand2 = random(gx / (float)width, gy / (float)height, randSeed + iteration);
+            float rand0 = random(&randSeed);
+            float rand1 = random(&randSeed);
+            float rand2 = random(&randSeed);
 
             if (options != DEFAULT)
             {
@@ -656,13 +669,13 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
             L += directLight * brdfCosFactor;
 
             float3 newDirection;
-            float rand3 = random((gx + iteration) / (float)width, (gy + iteration) / (float)height, randSeed); // select which surface characteristic is used for the next ray direction
+            float rand3 = random(&randSeed); // select which surface characteristic is used for the next ray direction
             float3 selectedSurfaceCharacteristic = getObjectSurfaceCharacteristic(&intersection);
 
             if (rand3 < selectedSurfaceCharacteristic.x)
             { // diffuse reflection
-                float rand4 = random((gx + randSeed) / (float)width, (gy + iteration) / (float)height, randSeed);
-                float rand5 = random((gx + iteration) / (float)width, (gy + randSeed) / (float)height, randSeed);
+                float rand4 = random(&randSeed);
+                float rand5 = random(&randSeed);
                 float3 directionInHemisphere = sampleCosHemisphere(0.f, rand4, rand5);
 
                 newDirection = transformIntoTangentSpace(intersection.normal, directionInHemisphere);
@@ -680,8 +693,6 @@ __kernel void render(__global float4 *image, __constant Sphere *spheres, __const
             ray.direction = newDirection;
 
             brdfCosFactor *= dot(intersection.normal, ray.direction);
-
-            randSeed = random(randSeed, position / (width), i * seed);
         }
         else
         {

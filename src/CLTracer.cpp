@@ -174,7 +174,7 @@ void CLTracer::trace()
 
 	glFinish();
 
-	auto randomNumberSeed = (float) (rand() / (double) RAND_MAX);
+	auto randomNumberSeed = arc4random();
 
 	cl_int clError;
 
@@ -189,14 +189,8 @@ void CLTracer::trace()
 	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_mem), (void *) &sceneInfo);
 	clError |= clSetKernelArg(renderKernel, 6, sizeof(cl_mem), (void *) &camera);
 	clError |= clSetKernelArg(renderKernel, 7, sizeof(cl_int), (void *) &iteration);
-	clError |= clSetKernelArg(renderKernel, 8, sizeof(cl_int), (void *) &randomNumberSeed);
+	clError |= clSetKernelArg(renderKernel, 8, sizeof(cl_uint), (void *) &randomNumberSeed);
 	clError |= clSetKernelArg(renderKernel, 9, sizeof(cl_int), (void *) &option);
-//
-//	clError |= clSetKernelArg(renderKernel, 3, sizeof(cl_mem), (void *) &sceneInfo);
-//	clError |= clSetKernelArg(renderKernel, 4, sizeof(cl_mem), (void *) &camera);
-//	clError |= clSetKernelArg(renderKernel, 5, sizeof(cl_int), (void *) &iteration);
-//	clError |= clSetKernelArg(renderKernel, 6, sizeof(cl_float), (void *) &randomNumberSeed);
-//	clError |= clSetKernelArg(renderKernel, 7, sizeof(cl_int), (void *) &option);
 
 	V_RETURN_CL(clError, "Failed to set trace kernel arguments");
 

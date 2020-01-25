@@ -187,7 +187,7 @@ void showImGuiToolTip(ReferenceHolder *holder)
 	ImGui::Text("Camera Resolution: (%d, %d)", resolution.x, resolution.y);
 
 	ImGui::Text("Iteration: %d", holder->tracer->iteration);
-	ImGui::SliderInt("Max Samples", &holder->tracer->maxSamples, 1, 10000);
+	ImGui::SliderInt("Max Samples", &holder->tracer->maxSamples, 1, INT_MAX / 2);
 
 	ImGui::Text("FPS: %f", fps);
 
@@ -308,7 +308,6 @@ int main(int, char **)
 	glfwGetFramebufferSize(window, &width, &height);
 
 	glfwMakeContextCurrent(window);
-	glfwSwapInterval(1); // Enable vsync
 
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK)
